@@ -22,6 +22,23 @@ public static class DemoContent
         new ProjectEntry { Path = @"D:\Projekte\wetter-bot", Name = "wetter-bot", LastUsed = DateTime.Now.AddDays(-3), HasClaudeHistory = false },
     };
 
+    public static List<ChatEntry> Chats()
+    {
+        ChatEntry C(string title, string project, DateTime t) =>
+            new() { SessionId = Guid.NewGuid().ToString(), Title = title, ProjectPath = @"D:\Projekte\" + project, ProjectName = project, LastUsed = t };
+        return new()
+        {
+            C("Dunkelmodus-Schalter in den Einstellungen", "aurora-web", DateTime.Now.AddMinutes(-2)),
+            C("CSV-Import robuster machen", "data-pipeline", DateTime.Now.AddMinutes(-48)),
+            C("Wochenplan als Tabelle zusammenfassen", "notizen", DateTime.Now.AddHours(-5)),
+            C("Ladezeit der Startseite halbieren", "aurora-web", DateTime.Now.AddDays(-1)),
+            C("Projektgalerie mit Filtern", "portfolio", DateTime.Now.AddDays(-1).AddHours(-3)),
+            C("Fehlende Tests für den Parser", "data-pipeline", DateTime.Now.AddDays(-3)),
+            C("Telegram-Befehl /morgen einbauen", "wetter-bot", DateTime.Now.AddDays(-4)),
+            C("Abhängigkeiten aktualisieren", "aurora-web", DateTime.Now.AddDays(-12)),
+        };
+    }
+
     public static UsageInfo Usage() => new()
     {
         Model = "Opus 5.5",

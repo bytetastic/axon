@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     readonly ObservableCollection<ClaudeSession> _sessions = new();
     readonly ObservableCollection<ProjectEntry> _projects = new();
     readonly ObservableCollection<ProjectEntry> _recent = new();
+    readonly ObservableCollection<ChatEntry> _chats = new();
     readonly IpcServer _ipc;
     readonly Notifier _notifier;
     readonly DispatcherTimer _clock;
@@ -49,12 +50,14 @@ public partial class MainWindow : Window
         TabList.ItemsSource = _sessions;
         ProjectList.ItemsSource = _projects;
         RecentCards.ItemsSource = _recent;
+        ChatList.ItemsSource = _chats;
         StatusVersion.Text = "v" + AppPaths.Version;
 
         RestoreWindowBounds();
         WireButtons();
         ApplyAnimationLevel();
         ApplySidebar(false);
+        ApplySidebarView();
         Field.Ignited += OnIgnited;
         PrepareIntro();
 
@@ -342,6 +345,8 @@ public partial class MainWindow : Window
         SidebarButton.Click += (_, _) => ToggleSidebar();
         NewTabButton.Click += (_, _) => PickFolderAndOpen();
         OpenFolderButton.Click += (_, _) => PickFolderAndOpen();
+        ViewProjects.Checked += (_, _) => SetSidebarView("projekte");
+        ViewChats.Checked += (_, _) => SetSidebarView("chats");
         WelcomeOpenButton.Click += (_, _) => PickFolderAndOpen();
         WelcomeHomeButton.Click += (_, _) => OpenSession(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         RestoreButton.Click += (_, _) => RestoreLastTabs();
@@ -388,6 +393,7 @@ public partial class MainWindow : Window
         };
         s.PropertyChanged += (_, e) => { if (s == _current && e.PropertyName is nameof(ClaudeSession.StateText) or nameof(ClaudeSession.ClaudeTitle)) UpdateStatus(); };
         s.UsageChanged += OnUsageChanged;
+        s.ChatChanged += _ => RefreshChats();
         s.View.Notice += t => ShowToast(t);
         s.View.ScreenshotRequested += InsertScreenshot;
         s.View.GridSizeChanged += (c, r) => { if (s == _current) StatusGrid.Text = $"{c} × {r}"; };
@@ -446,6 +452,7 @@ public partial class MainWindow : Window
         TerminalHost.Children.Remove(s.View);
         _sessions.Remove(s);
         _lastNotified.Remove(s.Id);
+        if (s.ChatId != null) RefreshChats();
         if (_current == s)
         {
             _current = null;
@@ -706,6 +713,89 @@ public partial class MainWindow : Window
             foreach (var p in t.Result.Take(6)) _recent.Add(p);
             RecentLabel.Visibility = _recent.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }, TaskScheduler.FromCurrentSynchronizationContext());
+        RefreshChats();
+    }
+
+    // ───────────────────────────── Chats ─────────────────────────────
+
+    bool _chatsLoading, _chatsAgain;
+
+    /// <summary>Liest die Gespräche neu ein (im Hintergrund; kommt währenddessen noch ein Aufruf, läuft danach genau ein weiterer).</summary>
+    void RefreshChats()
+    {
+        if (_chatsLoading) { _chatsAgain = true; return; }
+        _chatsLoading = true;
+        var hidden = new Dictionary<string, DateTime>(_settings.HiddenProjects);
+        Task.Run(() => ChatHistory.Load(hidden)).ContinueWith(t =>
+        {
+            _chatsLoading = false;
+            if (t.Exception == null)
+            {
+                var open = new HashSet<string>(_sessions.Where(s => s.ChatId != null).Select(s => s.ChatId!));
+                _chats.Clear();
+                foreach (var c in t.Result)
+                {
+                    c.IsOpen = open.Contains(c.SessionId);
+                    _chats.Add(c);
+                }
+            }
+            if (_chatsAgain) { _chatsAgain = false; RefreshChats(); }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    void SetSidebarView(string view)
+    {
+        if (_settings.SidebarView == view && (view == "chats") == (ChatScroll.Visibility == Visibility.Visible)) return;
+        _settings.SidebarView = view;
+        _settings.Save();
+        ApplySidebarView();
+        if (view == "chats") RefreshChats();
+        if (!_settings.SidebarOpen) ToggleSidebar();
+    }
+
+    void ApplySidebarView()
+    {
+        bool chats = _settings.SidebarView == "chats";
+        var show = chats ? ChatScroll : ProjectScroll;
+        (chats ? ProjectScroll : ChatScroll).Visibility = Visibility.Collapsed;
+        bool already = show.Visibility == Visibility.Visible;
+        show.Visibility = Visibility.Visible;
+        // erst nach dem Umschalten der Listen, damit der Checked-Handler nichts mehr zu tun hat
+        ViewChats.IsChecked = chats;
+        ViewProjects.IsChecked = !chats;
+        SidebarHint.Text = chats ? "Klick setzt das Gespräch fort – auch nach einem Neustart." : "Ordner lassen sich auch einfach ins Fenster ziehen.";
+        if (already) return;
+        // sanft einblenden, leicht von links
+        var shift = new TranslateTransform(-10, 0);
+        show.RenderTransform = shift;
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        show.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
+        shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-10, 0, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease });
+    }
+
+    /// <summary>Läuft das Gespräch schon in einem Tab, wird der gewählt – sonst in einem neuen Tab fortgesetzt.</summary>
+    void ResumeChat(ChatEntry c)
+    {
+        var tab = _sessions.FirstOrDefault(s => s.ChatId == c.SessionId);
+        if (tab != null) { Select(tab); return; }
+        if (DemoContent.Enabled || !Directory.Exists(c.ProjectPath)) return;
+        OpenSession(c.ProjectPath, "--resume", c.SessionId);
+    }
+
+    void Chat_Click(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is ChatEntry c) ResumeChat(c);
+    }
+
+    static ChatEntry? MenuChat(object sender) => (sender as FrameworkElement)?.DataContext as ChatEntry;
+
+    void ChatMenuResume_Click(object sender, RoutedEventArgs e) { if (MenuChat(sender) is { } c) ResumeChat(c); }
+    void ChatMenuNew_Click(object sender, RoutedEventArgs e) { if (MenuChat(sender) is { } c && Directory.Exists(c.ProjectPath)) OpenSession(c.ProjectPath); }
+
+    void ChatMenuExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuChat(sender) is not { } c || !Directory.Exists(c.ProjectPath)) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{c.ProjectPath}\"") { UseShellExecute = true }); } catch { }
     }
 
     void Project_Click(object sender, MouseButtonEventArgs e)
@@ -987,6 +1077,7 @@ public partial class MainWindow : Window
                 case Key.W: if (_current != null) _ = CloseSession(_current); break;
                 case Key.O: PickFolderAndOpen(); break;
                 case Key.B: ToggleSidebar(); break;
+                case Key.J: SetSidebarView(_settings.SidebarView == "chats" ? "projekte" : "chats"); break;
                 case Key.S: InsertScreenshot(); break;
                 case Key.Space: ToggleVoice(); break;
                 case Key.Tab: CycleTabs(-1); break;

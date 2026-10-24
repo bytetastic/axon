@@ -29,6 +29,8 @@ public sealed class AppSettings
     public string? VoiceDevice { get; set; }
     public string? ClaudePath { get; set; }
     public bool SidebarOpen { get; set; } = true;
+    /// <summary>Was die Seitenleiste zeigt: "projekte" oder "chats".</summary>
+    public string SidebarView { get; set; } = "projekte";
     public bool InstallPromptDismissed { get; set; }
 
     public double? WinLeft { get; set; }

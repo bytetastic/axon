@@ -23,18 +23,17 @@ public sealed class ProjectEntry
         }
     }
 
-    public string LastUsedText
+    public string LastUsedText => Ago(LastUsed);
+
+    public static string Ago(DateTime t)
     {
-        get
-        {
-            var d = DateTime.Now - LastUsed;
-            if (d.TotalMinutes < 1) return "gerade eben";
-            if (d.TotalMinutes < 60) return $"vor {(int)d.TotalMinutes} Min.";
-            if (d.TotalHours < 24) return $"vor {(int)d.TotalHours} Std.";
-            if (d.TotalDays < 2) return "gestern";
-            if (d.TotalDays < 7) return $"vor {(int)d.TotalDays} Tagen";
-            return LastUsed.ToString("dd.MM.yyyy");
-        }
+        var d = DateTime.Now - t;
+        if (d.TotalMinutes < 1) return "gerade eben";
+        if (d.TotalMinutes < 60) return $"vor {(int)d.TotalMinutes} Min.";
+        if (d.TotalHours < 24) return $"vor {(int)d.TotalHours} Std.";
+        if (d.TotalDays < 2) return "gestern";
+        if (d.TotalDays < 7) return $"vor {(int)d.TotalDays} Tagen";
+        return t.ToString("dd.MM.yyyy");
     }
 }
 

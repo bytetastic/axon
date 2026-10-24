@@ -35,6 +35,11 @@ public sealed class ClaudeSession : INotifyPropertyChanged
     bool _unseen;
     bool _isSelected;
 
+    /// <summary>Claudes Gesprächs-Id (aus den Hooks, beim Fortsetzen schon vorher bekannt) – null bis zur ersten Meldung.</summary>
+    public string? ChatId { get; private set; }
+    /// <summary>Die Gesprächs-Id hat sich geändert (neues Gespräch, /clear, Fortsetzen).</summary>
+    public event Action<ClaudeSession>? ChatChanged;
+
     public DateTime? TurnStart { get; private set; }
     public TimeSpan? LastTurn { get; private set; }
     public int ExitCode { get; private set; }
@@ -66,6 +71,8 @@ public sealed class ClaudeSession : INotifyPropertyChanged
         _settings = settings;
         _dispatcher = dispatcher;
         _args = args.ToArray();
+        int resume = Array.IndexOf(_args, "--resume");
+        if (resume >= 0 && resume + 1 < _args.Length) ChatId = _args[resume + 1];
 
         Emulator = new TerminalEmulator(120, 30);
         View = new TerminalView();
@@ -243,12 +250,15 @@ public sealed class ClaudeSession : INotifyPropertyChanged
 
     public void Write(string s) => _pty?.Write(s);
 
-    /// <summary>Startet Claude in diesem Tab neu (z. B. nach /exit). Mit <paramref name="continueLast"/> wird das letzte Gespräch fortgesetzt.</summary>
+    /// <summary>Startet Claude in diesem Tab neu (z. B. nach /exit). Mit <paramref name="continueLast"/> wird das Gespräch
+    /// dieses Tabs fortgesetzt (ist seine Id unbekannt, das letzte im Ordner).</summary>
     public void Restart(bool continueLast)
     {
         _pty?.Dispose();
         _pty = null;
-        _args = continueLast ? new[] { "--continue" } : Array.Empty<string>();
+        _args = !continueLast ? Array.Empty<string>()
+            : ChatId != null ? new[] { "--resume", ChatId }
+            : new[] { "--continue" };
         lock (Emulator.Sync)
         {
             Emulator.Feed("\x1bc\x1b[3J");
@@ -298,6 +308,11 @@ public sealed class ClaudeSession : INotifyPropertyChanged
         }
         string ev = Str(root, "hook_event_name");
         string tool = Str(root, "tool_name");
+        if (Str(root, "session_id") is { Length: > 0 } chat && chat != ChatId)
+        {
+            ChatId = chat;
+            ChatChanged?.Invoke(this);
+        }
         switch (ev)
         {
             case "SessionStart":
