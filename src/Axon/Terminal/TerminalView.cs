@@ -72,6 +72,13 @@ public sealed class TerminalView : FrameworkElement
 
     // Ansicht
     long? _viewTop;
+    // Weiches Scrollen: _viewTop ist die oberste ganze Zeile, _frac der Bruchteil darüber hinaus (0–1 Zeile).
+    // Das Rad verschiebt nur das Ziel, die Position gleitet pro Bild dorthin.
+    double _frac;
+    double _scrollTarget;
+    bool _scrollAnimating;
+    double _shownShift = -1;
+    const double ScrollEase = 0.085;
     double _scrollbarAlpha;
     DateTime _scrollbarShown = DateTime.MinValue;
     bool _draggingScrollbar;
@@ -130,7 +137,7 @@ public sealed class TerminalView : FrameworkElement
         _emu = emu;
         _seenVersion = -1;
         _layout++;
-        emu.ScrollbackCleared += () => Dispatcher.BeginInvoke(() => { _viewTop = null; ClearSelection(); });
+        emu.ScrollbackCleared += () => Dispatcher.BeginInvoke(() => { JumpToBottom(); ClearSelection(); });
     }
 
     public double FontSizeValue => _fontSize;
@@ -148,6 +155,11 @@ public sealed class TerminalView : FrameworkElement
 
     protected override int VisualChildrenCount => _children.Count;
     protected override Visual GetVisualChild(int index) => _children[index];
+
+    // Ohne eigenen Hintergrund träfe die Maus nur gezeichnete Buchstaben – Mausrad, Markieren und Rechtsklick
+    // gingen über Leerzeichen und Zeilenabständen ins Leere. Deshalb zählt die ganze Fläche als Treffer.
+    protected override HitTestResult? HitTestCore(PointHitTestParameters p) =>
+        new Rect(RenderSize).Contains(p.HitPoint) ? new PointHitTestResult(this, p.HitPoint) : null;
 
     // Gezeichnet wird nur bei Bedarf: neue Ausgabe, Eingabe, Maus, Scrollen oder Cursorbewegung wecken die Ansicht,
     // nach ein paar ruhigen Bildern hängt sie sich wieder vom Bildtakt ab.
@@ -249,20 +261,21 @@ public sealed class TerminalView : FrameworkElement
         int cols = Math.Max(20, (int)(w / _cw));
         int rows = Math.Max(4, (int)(h / _lh));
 
-        while (_rows.Count < rows)
+        // eine Zeile mehr als sichtbar: beim weichen Scrollen schaut unten eine angeschnittene Zeile herein
+        while (_rows.Count < rows + 1)
         {
             var rv = new RowVisual();
             _rows.Add(rv);
             _children.Insert(_rows.Count - 1, rv);
         }
-        while (_rows.Count > rows)
+        while (_rows.Count > rows + 1)
         {
             var rv = _rows[^1];
             _rows.RemoveAt(_rows.Count - 1);
             _children.Remove(rv);
         }
-        double top = Snap(_pad.Top);
-        for (int i = 0; i < _rows.Count; i++) _rows[i].Offset = new Vector(Snap(_pad.Left), top + i * _lh);
+        _shownShift = -1;
+        PlaceRows();
         _layout++;
 
         if (cols != Cols || rows != RowsCount)
@@ -294,7 +307,8 @@ public sealed class TerminalView : FrameworkElement
         }
         else _syncStart = DateTime.MinValue;
 
-        bool busy = UpdateRows();
+        bool busy = AnimateScroll(dt);
+        busy |= UpdateRows();
         busy |= AnimateCursor(dt);
         busy |= AnimateScrollbar(dt);
         busy |= _selecting || _draggingScrollbar || (now - _lastTyped).TotalSeconds < 1.0 || (now - _scrollbarShown).TotalSeconds < 1.6;
@@ -309,8 +323,49 @@ public sealed class TerminalView : FrameworkElement
         if (_viewTop == null) return bottomTop;
         long first = emu.FirstAbs;
         long v = Math.Clamp(_viewTop.Value, first, bottomTop);
-        if (v >= bottomTop) { _viewTop = null; return bottomTop; }
+        if (v >= bottomTop) { _viewTop = null; _frac = 0; return bottomTop; }
         return v;
+    }
+
+    /// <summary>Aktuelle Position als gebrochene absolute Zeile. Nur unter emu.Sync aufrufen.</summary>
+    double ViewPosUnsafe()
+    {
+        long top = ViewTopUnsafe();
+        return _viewTop == null ? top : top + _frac;
+    }
+
+    /// <summary>Setzt die Position (gebrochen) direkt. Nur unter emu.Sync aufrufen.</summary>
+    void SetViewPosUnsafe(double pos)
+    {
+        var emu = _emu!;
+        long bottomTop = emu.ScreenTopAbs;
+        pos = Math.Clamp(pos, emu.FirstAbs, bottomTop);
+        long top = (long)Math.Floor(pos);
+        if (top >= bottomTop) { _viewTop = null; _frac = 0; }
+        else { _viewTop = top; _frac = pos - top; }
+    }
+
+    /// <summary>Zeilen um den Bruchteil nach oben schieben – auf ganze Bildschirmpixel, sonst verschwimmt der zwischengespeicherte Text.</summary>
+    void PlaceRows()
+    {
+        double shift = _viewTop == null ? 0 : Snap(_frac * _lh);
+        if (shift == _shownShift) return;
+        _shownShift = shift;
+        double left = Snap(_pad.Left), top = Snap(_pad.Top) - shift;
+        for (int i = 0; i < _rows.Count; i++) _rows[i].Offset = new Vector(left, top + i * _lh);
+        _selectionVisual.Offset = new Vector(0, -shift);
+    }
+
+    /// <summary>Rückt die Zeilenvisuals mit, wenn sich die oberste Zeile verschiebt, damit sie ihre Zeile behalten
+    /// und nur die neu hereinkommenden gezeichnet werden müssen.</summary>
+    void RotateRows(long delta)
+    {
+        int n = _rows.Count;
+        if (delta == 0 || Math.Abs(delta) >= n) return;
+        var old = _rows.ToArray();
+        int d = (int)delta;
+        for (int r = 0; r < n; r++) _rows[r] = old[((r + d) % n + n) % n];
+        _shownShift = -1;
     }
 
     /// <returns>true, wenn sich etwas geändert hat.</returns>
@@ -320,8 +375,11 @@ public sealed class TerminalView : FrameworkElement
         lock (emu.Sync)
         {
             long top = ViewTopUnsafe();
-            if (emu.Version == _seenVersion && top == _seenTop && _rows[0].Layout == _layout && _selDrawn == _selVersion && _selDrawnTop == top && _selLayout == _layout)
+            bool shiftChanged = (_viewTop == null ? 0 : Snap(_frac * _lh)) != _shownShift;
+            if (emu.Version == _seenVersion && top == _seenTop && !shiftChanged && _rows[0].Layout == _layout && _selDrawn == _selVersion && _selDrawnTop == top && _selLayout == _layout)
                 return false;
+            if (_seenTop >= 0 && top != _seenTop) RotateRows(top - _seenTop);
+            PlaceRows();
             _seenVersion = emu.Version;
             _seenTop = top;
             if (Trace) _traceFrames++;
@@ -607,38 +665,93 @@ public sealed class TerminalView : FrameworkElement
 
     // ───────────────────────────── Scrollen ─────────────────────────────
 
-    public void ScrollBy(long lines)
+    /// <summary>Scrollt weich um <paramref name="lines"/> Zeilen (auch Bruchteile, z. B. vom Touchpad).
+    /// Mehrere Rasten hintereinander addieren sich aufs Ziel, statt die laufende Bewegung neu zu starten.</summary>
+    public void ScrollBy(double lines)
     {
         Wake();
         if (_emu == null) return;
         lock (_emu.Sync)
         {
-            long top = ViewTopUnsafe() + lines;
-            long bottomTop = _emu.ScreenTopAbs;
-            top = Math.Clamp(top, _emu.FirstAbs, bottomTop);
-            _viewTop = top >= bottomTop ? null : top;
+            double from = _scrollAnimating ? _scrollTarget : ViewPosUnsafe();
+            _scrollTarget = Math.Clamp(from + lines, _emu.FirstAbs, _emu.ScreenTopAbs);
+            _scrollAnimating = _scrollTarget != ViewPosUnsafe();
         }
         _scrollbarShown = DateTime.UtcNow;
     }
 
-    public void ScrollToBottom() { _viewTop = null; Wake(); }
+    /// <summary>Gleitet zu einer absoluten Zeile; null = ganz nach unten.</summary>
+    void ScrollTo(long? abs)
+    {
+        Wake();
+        if (_emu == null) return;
+        lock (_emu.Sync)
+        {
+            _scrollTarget = Math.Clamp(abs ?? _emu.ScreenTopAbs, _emu.FirstAbs, _emu.ScreenTopAbs);
+            _scrollAnimating = _scrollTarget != ViewPosUnsafe();
+        }
+        _scrollbarShown = DateTime.UtcNow;
+    }
+
+    public void ScrollToBottom() => ScrollTo(null);
+
+    /// <summary>Sofort ans Ende, ohne Gleiten (Tippen, gelöschter Verlauf).</summary>
+    void JumpToBottom()
+    {
+        _scrollAnimating = false;
+        _viewTop = null;
+        _frac = 0;
+        Wake();
+    }
+
+    /// <returns>true, solange die Ansicht noch gleitet.</returns>
+    bool AnimateScroll(double dt)
+    {
+        if (!_scrollAnimating) return false;
+        var emu = _emu!;
+        lock (emu.Sync)
+        {
+            // Ziel kann durch neuen Verlauf oder verworfene alte Zeilen außerhalb des Bereichs liegen
+            double target = Math.Clamp(_scrollTarget, emu.FirstAbs, emu.ScreenTopAbs);
+            double pos = ViewPosUnsafe();
+            double k = 1 - Math.Exp(-dt / ScrollEase);
+            double next = pos + (target - pos) * k;
+            // fertig, sobald der Rest unter einem halben Pixel liegt
+            if (Math.Abs(target - next) * _lh < 0.5) { next = target; _scrollAnimating = false; }
+            SetViewPosUnsafe(next);
+        }
+        _scrollbarShown = DateTime.UtcNow;
+        return true;
+    }
+
+    /// <summary>Zeilen pro Raste aus der Windows-Einstellung („Seitenweise“ = eine Bildschirmseite).</summary>
+    double WheelLines => SystemParameters.WheelScrollLines switch
+    {
+        < 0 => Math.Max(1, RowsCount - 1),
+        0 => 3,
+        var n => n,
+    };
+
+    double _wheelRest;
 
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
         Wake();
         base.OnMouseWheel(e);
         if (_emu == null) return;
-        int notches = e.Delta / 120;
-        if (notches == 0) notches = Math.Sign(e.Delta);
         bool mouseMode;
         lock (_emu.Sync) mouseMode = _emu.MouseMode != 0 && _emu.MouseSgr;
         if (mouseMode && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
         {
+            // Programme mit Mausmodus bekommen ganze Rasten; Touchpad-Bruchteile werden gesammelt.
+            _wheelRest += e.Delta / 120.0;
+            int notches = (int)_wheelRest;
+            _wheelRest -= notches;
             var (_, col, row) = CellAt(e.GetPosition(this));
             for (int i = 0; i < Math.Abs(notches); i++)
                 Send?.Invoke($"\x1b[<{(notches > 0 ? 64 : 65)};{col + 1};{row + 1}M");
         }
-        else ScrollBy(-notches * 3);
+        else ScrollBy(-e.Delta / 120.0 * WheelLines);
         e.Handled = true;
     }
 
@@ -648,12 +761,13 @@ public sealed class TerminalView : FrameworkElement
     bool AnimateScrollbar(double dt)
     {
         var emu = _emu!;
-        long first, bottomTop, top;
+        long first, bottomTop;
+        double top;
         lock (emu.Sync)
         {
             first = emu.FirstAbs;
             bottomTop = emu.ScreenTopAbs;
-            top = ViewTopUnsafe();
+            top = ViewPosUnsafe();
         }
         long hidden = bottomTop - first;
         bool hover = IsMouseOver && _mouse.X > ActualWidth - 16;
@@ -680,13 +794,13 @@ public sealed class TerminalView : FrameworkElement
         return _scrollbarAlpha != target;
     }
 
-    (double y, double h) ThumbRect(long first, long bottomTop, long top)
+    (double y, double h) ThumbRect(long first, long bottomTop, double top)
     {
         double trackTop = 6, trackH = ActualHeight - 12;
         long total = bottomTop - first + RowsCount;
         double h = Math.Max(28, trackH * RowsCount / Math.Max(1, total));
-        double frac = bottomTop - first <= 0 ? 1 : (double)(top - first) / (bottomTop - first);
-        return (trackTop + (trackH - h) * frac, h);
+        double frac = bottomTop - first <= 0 ? 1 : (top - first) / (bottomTop - first);
+        return (Snap(trackTop + (trackH - h) * frac), h);
     }
 
     // ───────────────────────────── Auswahl ─────────────────────────────
@@ -694,11 +808,13 @@ public sealed class TerminalView : FrameworkElement
     (long abs, int col, int row) CellAt(Point p)
     {
         int col = (int)Math.Floor((p.X - _pad.Left) / _cw);
-        int row = (int)Math.Floor((p.Y - _pad.Top) / _lh);
         col = Math.Clamp(col, 0, Math.Max(0, Cols - 1));
-        int rowClamped = Math.Clamp(row, 0, Math.Max(0, RowsCount - 1));
         long top;
-        lock (_emu!.Sync) top = ViewTopUnsafe();
+        double shift;
+        lock (_emu!.Sync) { top = ViewTopUnsafe(); shift = _viewTop == null ? 0 : Snap(_frac * _lh); }
+        int row = (int)Math.Floor((p.Y - _pad.Top + shift) / _lh);
+        // beim Scrollen kann unten eine angeschnittene Zusatzzeile sichtbar sein
+        int rowClamped = Math.Clamp(row, 0, Math.Max(0, RowsCount - (shift > 0 ? 0 : 1)));
         return (top + rowClamped, col, rowClamped);
     }
 
@@ -729,7 +845,7 @@ public sealed class TerminalView : FrameworkElement
         var (s, e) = OrderedSelection();
         var brush = BrushFor(TerminalTheme.Selection);
         double left = Snap(_pad.Left), y0 = Snap(_pad.Top);
-        for (int r = 0; r < RowsCount; r++)
+        for (int r = 0; r <= RowsCount; r++)
         {
             long abs = top + r;
             if (abs < s.abs || abs > e.abs) continue;
@@ -800,8 +916,9 @@ public sealed class TerminalView : FrameworkElement
 
         if (p.X > ActualWidth - 16 && _scrollbarAlpha > 0.05)
         {
-            long first, bottomTop, top;
-            lock (_emu.Sync) { first = _emu.FirstAbs; bottomTop = _emu.ScreenTopAbs; top = ViewTopUnsafe(); }
+            long first, bottomTop;
+            double top;
+            lock (_emu.Sync) { first = _emu.FirstAbs; bottomTop = _emu.ScreenTopAbs; top = ViewPosUnsafe(); }
             var (ty, th) = ThumbRect(first, bottomTop, top);
             _draggingScrollbar = true;
             _dragOffset = p.Y >= ty && p.Y <= ty + th ? p.Y - ty : th / 2;
@@ -860,8 +977,12 @@ public sealed class TerminalView : FrameworkElement
         var (_, th) = ThumbRect(first, bottomTop, first);
         double trackTop = 6, trackH = ActualHeight - 12;
         double frac = Math.Clamp((y - _dragOffset - trackTop) / Math.Max(1, trackH - th), 0, 1);
-        long top = first + (long)Math.Round(frac * (bottomTop - first));
-        _viewTop = top >= bottomTop ? null : top;
+        // pixelgenau statt in ganzen Zeilen, damit auch das Ziehen am Balken gleitet
+        lock (_emu.Sync)
+        {
+            _scrollAnimating = false;
+            SetViewPosUnsafe(first + frac * (bottomTop - first));
+        }
         _scrollbarShown = DateTime.UtcNow;
     }
 
@@ -964,7 +1085,7 @@ public sealed class TerminalView : FrameworkElement
     {
         Wake();
         if (string.IsNullOrEmpty(s)) return;
-        _viewTop = null;
+        JumpToBottom();
         _lastTyped = DateTime.UtcNow;
         if (HasSelection && !_selecting) ClearSelection();
         Send?.Invoke(s);
@@ -997,7 +1118,7 @@ public sealed class TerminalView : FrameworkElement
         if (ctrl && shift && key is Key.Home or Key.End)
         {
             if (key == Key.End) ScrollToBottom();
-            else lock (_emu.Sync) _viewTop = _emu.FirstAbs;
+            else { long first; lock (_emu.Sync) first = _emu.FirstAbs; ScrollTo(first); }
             return true;
         }
         // Shift+Enter = Zeilenumbruch in Claude Code (wie /terminal-setup in VS Code: „\“ + Enter)
