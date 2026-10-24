@@ -109,6 +109,11 @@
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
                     <Button x:Name="UpdateButton" Style="{StaticResource PrimaryButton}" Padding="11,4" FontSize="11.5" Margin="0,0,10,0"
                             Visibility="Collapsed" ToolTip="Eine neue Version von Axon ist verfügbar"/>
+                    <Grid>
+                        <v:VoiceMeter x:Name="MicMeter"/>
+                        <Button x:Name="MicButton" Style="{StaticResource IconButton}" Content="&#xE720;"
+                                ToolTip="Spracheingabe – klicken, sprechen, nochmal klicken (Strg+Umschalt+Leertaste)"/>
+                    </Grid>
                     <Button x:Name="ScreenshotButton" Style="{StaticResource IconButton}" Content="&#xE722;"
                             ToolTip="Letzten Screenshot einfügen (Strg+Umschalt+S)"/>
                     <Button x:Name="SettingsButton" Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="Einstellungen (Strg+,)"/>
@@ -287,6 +292,21 @@
                     </Grid>
 
                     <StackPanel x:Name="ToastHost" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,18" IsHitTestVisible="False"/>
+
+                    <!-- Spracheingabe: Klangkurve, solange aufgenommen bzw. erkannt wird -->
+                    <Border x:Name="VoicePill" Visibility="Collapsed" Opacity="0" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Margin="0,0,0,26" Padding="16,7,18,7" CornerRadius="22" Cursor="Hand"
+                            Background="{StaticResource CardBrush}" BorderBrush="#55FF6B7A" BorderThickness="1">
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="VoicePillShift"/>
+                        </Border.RenderTransform>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="VoiceDot" Width="7" Height="7" Fill="#FF6B7A" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="VoiceTime" Text="0:00" FontSize="12.5" Width="58" Margin="8,0,6,1" VerticalAlignment="Center"
+                                       Foreground="{StaticResource TextDimBrush}"/>
+                            <v:VoiceWave x:Name="VoiceWave" Width="260" Height="42" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Grid>
 
@@ -366,6 +386,21 @@
                               ToolTip="Fragt beim Öffnen einmal bei GitHub nach der neuesten Version. Übertragen werden nur IP-Adresse, Zeitpunkt und die Programmversion – keine Inhalte."/>
                     <CheckBox x:Name="NotifyBox" Style="{StaticResource SwitchBox}" Content="Benachrichtigungen" Margin="0,0,0,16"
                               ToolTip="Windows-Benachrichtigung, wenn Claude fertig ist oder eine Freigabe braucht – nur wenn Axon nicht im Vordergrund ist"/>
+
+                    <TextBlock Text="SPRACHEINGABE" Style="{StaticResource SectionLabel}"/>
+                    <Border Background="#0E3DDC97" CornerRadius="9" Margin="0,6,0,6" Padding="2">
+                        <UniformGrid Columns="2">
+                            <RadioButton x:Name="VoiceSmall" GroupName="voice" Content="Schnell" Style="{StaticResource SegmentButton}"
+                                         ToolTip="Whisper small – kaum Wartezeit, sehr gut für normale Sätze"/>
+                            <RadioButton x:Name="VoiceTurbo" GroupName="voice" Content="Genau" Style="{StaticResource SegmentButton}"
+                                         ToolTip="Whisper large-v3-turbo – trifft Namen und Fachbegriffe besser, rechnet aber mehrere Sekunden"/>
+                        </UniformGrid>
+                    </Border>
+                    <TextBlock x:Name="VoiceStatus" FontSize="12" Foreground="{StaticResource TextDimBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <TextBlock Text="Mikrofon" FontSize="12" Foreground="{StaticResource TextDimBrush}" Margin="0,0,0,4"/>
+                    <Border Background="#0E3DDC97" CornerRadius="9" Margin="0,0,0,16" Padding="2">
+                        <StackPanel x:Name="VoiceDevices"/>
+                    </Border>
 
                     <TextBlock Text="SCREENSHOT-ORDNER" Style="{StaticResource SectionLabel}"/>
                     <Grid Margin="0,6,0,16">

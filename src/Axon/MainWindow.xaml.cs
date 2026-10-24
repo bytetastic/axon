@@ -164,6 +164,13 @@ public partial class MainWindow : Window
                 };
                 ts.Start();
             }
+            // Spracheingabe durchspielen: mit AXON_TEST_VOICE=<wav> statt Mikrofon; endet die Datei, wird automatisch erkannt
+            if (extra == "voice")
+            {
+                var tv = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+                tv.Tick += (_, _) => { tv.Stop(); ToggleVoice(); };
+                tv.Start();
+            }
             if (Environment.GetEnvironmentVariable("AXON_TEST_INPUT") is { Length: > 0 } script)
             {
                 var ti = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Max(500, _snapshotDelay - 3500)) };
@@ -363,6 +370,7 @@ public partial class MainWindow : Window
         UninstallButton.Click += async (_, _) => await UninstallFromSettings();
         DesktopBox.Click += (_, _) => ApplyInstallOptions();
         ContextBox.Click += (_, _) => ApplyInstallOptions();
+        WireVoice();
     }
 
     // ───────────────────────────── Tabs ─────────────────────────────
@@ -980,6 +988,7 @@ public partial class MainWindow : Window
                 case Key.O: PickFolderAndOpen(); break;
                 case Key.B: ToggleSidebar(); break;
                 case Key.S: InsertScreenshot(); break;
+                case Key.Space: ToggleVoice(); break;
                 case Key.Tab: CycleTabs(-1); break;
                 default: handled = false; break;
             }
@@ -1103,6 +1112,7 @@ public partial class MainWindow : Window
             ClaudePathText.Text = @"%USERPROFILE%\.local\bin\claude.exe";
         }
         UpdateInstallSection();
+        UpdateVoiceSettings();
         SettingsPopup.IsOpen = true;
     }
 
@@ -1362,6 +1372,7 @@ public partial class MainWindow : Window
         }
         SaveState();
         foreach (var s in _sessions) s.Close();
+        ShutdownVoice();
         _clock.Stop();
         _ipc.Dispose();
         _notifier.Dispose();

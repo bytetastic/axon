@@ -23,6 +23,10 @@ public sealed class AppSettings
     /// <summary>Beim Start bei GitHub nach einer neueren Version fragen.</summary>
     public bool UpdateCheck { get; set; } = true;
     public string? ScreenshotFolder { get; set; }
+    /// <summary>Whisper-Modell der Spracheingabe: "small" oder "turbo".</summary>
+    public string VoiceModel { get; set; } = "small";
+    /// <summary>Gewähltes Mikrofon (voller Name); null = immer das Windows-Standardmikrofon.</summary>
+    public string? VoiceDevice { get; set; }
     public string? ClaudePath { get; set; }
     public bool SidebarOpen { get; set; } = true;
     public bool InstallPromptDismissed { get; set; }

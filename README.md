@@ -43,6 +43,9 @@ funktioniert unverändert. Dein normales `claude` im Terminal bleibt davon unber
 - **Live-Status** – *arbeitet*, *braucht Freigabe*, *fertig*, inklusive Dauer
 - **Benachrichtigungen** – wenn Claude fertig ist oder dich braucht, während du in einem anderen Fenster bist
 - **Nutzung im Blick** – Kontext und Abo-Limits als kleine Ringe, beim Darüberfahren die ganze Übersicht
+- **Spracheingabe** – Mikrofon-Knopf an, sprechen, aus: der Text landet in der Eingabezeile (nicht abgeschickt).
+  Erkannt wird lokal mit [Whisper](https://github.com/ggerganov/whisper.cpp), ohne Cloud. Eine Klangkurve schwingt
+  mit deiner Stimme mit; das Mikrofon ist wählbar (Standard: das Windows-Standardmikrofon)
 
 ### ⌨️ Ein Terminal, das sich gut anfühlt
 - Eigener Terminal-Renderer mit Truecolor und pixelgenauen Rahmen
@@ -68,6 +71,11 @@ funktioniert unverändert. Dein normales `claude` im Terminal bleibt davon unber
     <td align="center"><sub>Claude braucht eine Freigabe – die ganze App zeigt es</sub></td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/screenshots/spracheingabe.png" width="80%" alt="Spracheingabe mit Klangkurve"><br>
+  <sub>Spracheingabe: die Klangkurve schwingt mit deiner Stimme, erkannt wird lokal</sub>
+</p>
 
 <table>
   <tr>
@@ -110,6 +118,7 @@ Alle Axon-Kürzel nutzen Strg+**Umschalt**, damit Claude Codes eigene Kürzel fr
 | Strg+Tab / Strg+Umschalt+Tab | Tab wechseln |
 | Strg+Umschalt+B | Projekte ein- und ausblenden |
 | Strg+Umschalt+S | Letzten Screenshot einfügen |
+| Strg+Umschalt+Leertaste | Spracheingabe starten / beenden |
 | Shift+Enter | Neue Zeile in der Eingabe |
 | Strg+Plus / Minus / 0 | Schriftgröße |
 | Strg+, | Einstellungen |
@@ -122,6 +131,10 @@ Axon selbst sammelt nichts und schickt nichts an Dritte.
 - Beim Start fragt Axon einmal bei GitHub nach, ob es eine neue Version gibt. Dabei werden nur die üblichen
   Verbindungsdaten (IP-Adresse, Zeitpunkt) und die Programmversion übertragen. Das lässt sich in den
   Einstellungen abschalten.
+- Spracheingabe: Beim ersten Benutzen lädt Axon einmalig das Whisper-Sprachmodell von Hugging Face
+  (190 MB, „Genau“ 574 MB) nach `%LOCALAPPDATA%\Axon\models`. Die Erkennung selbst läuft komplett auf deinem
+  Rechner – Aufnahmen werden weder gespeichert noch verschickt. Aufgenommen wird nur das Mikrofon, solange der
+  Knopf rot ist; Geräte, die den PC-Ton mitschneiden (z. B. „Stereomix“), benutzt Axon grundsätzlich nicht.
 
 ## Voraussetzungen
 
