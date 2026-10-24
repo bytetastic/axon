@@ -21,6 +21,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandled;
+        // Pinsel stehen nicht mehr in Theme.xaml – auch Dialoge vor dem Hauptfenster brauchen sie
+        Visuals.ThemeManager.Apply(Visuals.AxonTheme.Neural);
 
         if (_args.Contains("--uninstall"))
         {
@@ -73,6 +75,8 @@ public partial class App : Application
         }
 
         var settings = AppSettings.Load();
+        Visuals.ThemeManager.Apply(Visuals.AxonTheme.ById(settings.Theme));
+        Axon.Terminal.TerminalTheme.Refresh();
         var win = new MainWindow(settings, folder, snapshot, snapshotDelay);
         MainWindow = win;
         win.Show();

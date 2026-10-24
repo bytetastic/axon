@@ -39,7 +39,7 @@ public sealed class UsageRing : FrameworkElement
         double size = Math.Min(ActualWidth, ActualHeight);
         double r = size / 2 - 1.5;
         var c = new Point(ActualWidth / 2, ActualHeight / 2);
-        var track = new Pen(new SolidColorBrush(Color.FromArgb(0x40, 0x3D, 0xDC, 0x97)), 2);
+        var track = new Pen(new SolidColorBrush(MoodPalette.WithAlpha(MoodPalette.Emerald, 0x40 / 255.0)), 2);
         track.Freeze();
         dc.DrawEllipse(null, track, c, r, r);
         if (double.IsNaN(Value) || Value <= 0) return;
@@ -88,7 +88,7 @@ public sealed class UsageBar : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         double w = ActualWidth, h = ActualHeight;
-        var track = new SolidColorBrush(Color.FromArgb(0x26, 0x3D, 0xDC, 0x97));
+        var track = new SolidColorBrush(MoodPalette.WithAlpha(MoodPalette.Emerald, 0x26 / 255.0));
         track.Freeze();
         dc.DrawRoundedRectangle(track, null, new Rect(0, 0, w, h), h / 2, h / 2);
         double v = Math.Clamp(Value, 0, 100) / 100;

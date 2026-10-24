@@ -28,8 +28,12 @@ public sealed class UsageCard : Border
     readonly StackPanel _ctxPanel = new();
     readonly TextBlock _ctxEmpty = Text(11.5, dim: true);
 
-    static readonly Brush DimBrush = new SolidColorBrush(Color.FromRgb(0x7E, 0x9C, 0x8E));
-    static readonly Brush FaintBrush = new SolidColorBrush(Color.FromRgb(0x4C, 0x66, 0x5A));
+    /// <summary>Textfarbe aus den Themen-Pinseln (folgt einem Themenwechsel).</summary>
+    static T Tinted<T>(T e, string brushKey) where T : FrameworkElement
+    {
+        e.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
+        return e;
+    }
 
     public UsageCard()
     {
@@ -77,25 +81,20 @@ public sealed class UsageCard : Border
         root.Children.Add(_cost);
 
         _footer.Margin = new Thickness(0, 12, 0, 0);
-        _footer.Foreground = FaintBrush;
+        Tinted(_footer, "TextFaintBrush");
         root.Children.Add(_footer);
         Child = root;
     }
 
-    static TextBlock Text(double size, bool dim = false) => new()
-    {
-        FontSize = size,
-        Foreground = dim ? DimBrush : new SolidColorBrush(Color.FromRgb(0xD6, 0xEC, 0xE1)),
-    };
+    static TextBlock Text(double size, bool dim = false) => Tinted(new TextBlock { FontSize = size }, dim ? "TextDimBrush" : "TextBrush");
 
-    static TextBlock Section(string title) => new()
+    static TextBlock Section(string title) => Tinted(new TextBlock
     {
         Text = title,
         FontFamily = new FontFamily("Bahnschrift"),
         FontSize = 10.5,
-        Foreground = FaintBrush,
         Margin = new Thickness(0, 14, 0, 6),
-    };
+    }, "TextFaintBrush");
 
     /// <param name="u">Daten des aktuellen Tabs (oder null)</param>
     /// <param name="five">letzter bekannter Stand des 5-Stunden-Fensters (kontoweit)</param>

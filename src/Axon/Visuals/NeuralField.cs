@@ -10,7 +10,7 @@ namespace Axon.Visuals;
 /// und lösen Kaskaden aus; von den Fensterkanten wachsen Dendriten herein.
 /// Alles ist zeitbasiert und bewusst langsam – Bewegung soll beruhigen, nicht ablenken.
 /// </summary>
-public sealed class NeuralField : FrameworkElement
+public sealed class NeuralField : Backdrop
 {
     sealed class Node
     {
@@ -133,7 +133,7 @@ public sealed class NeuralField : FrameworkElement
     // ───────────────────────────── Steuerung ─────────────────────────────
 
     Mood _mood = Mood.Calm;
-    public Mood Mood
+    public override Mood Mood
     {
         get => _mood;
         set
@@ -148,7 +148,7 @@ public sealed class NeuralField : FrameworkElement
     }
 
     AnimationLevel _level = AnimationLevel.Full;
-    public AnimationLevel Level
+    public override AnimationLevel Level
     {
         get => _level;
         set
@@ -169,13 +169,10 @@ public sealed class NeuralField : FrameworkElement
     double _introT = -1, _introSpeed = 1;
     bool _ignited;
 
-    /// <summary>Das Netz „zündet“ – Moment für weitere Effekte (Hintergrund hellt auf, Logo leuchtet).</summary>
-    public event Action? Ignited;
-
-    public bool IntroRunning => _introT >= 0;
+    public override bool IntroRunning => _introT >= 0;
 
     /// <summary>Startanimation abspielen. <paramref name="speed"/> &gt; 1 = kürzer (z. B. bei „dezent“).</summary>
-    public void PlayIntro(double speed = 1)
+    public override void PlayIntro(double speed = 1)
     {
         if (Level == AnimationLevel.Off) return;
         _introT = 0;
@@ -216,7 +213,7 @@ public sealed class NeuralField : FrameworkElement
             Ripple();
             _focus = keep;
             Burst(7);
-            Ignited?.Invoke();
+            RaiseIgnited();
         }
         if (_introT >= IntroEnd)
         {
@@ -226,16 +223,16 @@ public sealed class NeuralField : FrameworkElement
     }
 
     /// <summary>Mittelpunkt des Terminals – Ursprung der „Fertig“-Welle.</summary>
-    public void SetFocusPoint(Point p) => _focus = p;
+    public override void SetFocusPoint(Point p) => _focus = p;
 
-    public void SetPointer(Point p)
+    public override void SetPointer(Point p)
     {
         if (_size.Width <= 0) return;
         _parallaxTarget = new Point((p.X / _size.Width - 0.5) * -2, (p.Y / _size.Height - 0.5) * -2);
     }
 
     /// <summary>Benutzer hat etwas abgeschickt: Signale laufen die Dendriten entlang ins Netz.</summary>
-    public void FireInput()
+    public override void FireInput()
     {
         if (Level == AnimationLevel.Off) return;
         foreach (var d in _dendrites)
@@ -253,7 +250,7 @@ public sealed class NeuralField : FrameworkElement
     }
 
     /// <summary>Neuer Tab: ein neuer Dendrit wächst.</summary>
-    public void GrowDendrite()
+    public override void GrowDendrite()
     {
         if (Level == AnimationLevel.Off || _size.Width <= 0) return;
         if (_dendrites.Count >= MaxDendrites + 1) return;

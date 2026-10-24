@@ -46,6 +46,7 @@ public partial class MainWindow : Window
         _snapshotPath = snapshotPath;
         _snapshotDelay = snapshotDelay;
         InitializeComponent();
+        InstallBackdrop();
 
         TabList.ItemsSource = _sessions;
         ProjectList.ItemsSource = _projects;
@@ -58,7 +59,6 @@ public partial class MainWindow : Window
         ApplyAnimationLevel();
         ApplySidebar(false);
         ApplySidebarView();
-        Field.Ignited += OnIgnited;
         PrepareIntro();
 
         _ipc = new IpcServer(AppPaths.PipeName);
@@ -111,6 +111,7 @@ public partial class MainWindow : Window
         StartIntro();
         RefreshProjects();
         UpdateRestoreButton();
+        ScheduleTestThemeSwitch();
 
         if (DemoContent.Enabled) SetupDemo();
         else if (_initialFolder != null) OpenSession(_initialFolder);
@@ -376,6 +377,7 @@ public partial class MainWindow : Window
         DesktopBox.Click += (_, _) => ApplyInstallOptions();
         ContextBox.Click += (_, _) => ApplyInstallOptions();
         WireVoice();
+        WireTheme();
     }
 
     // ───────────────────────────── Tabs ─────────────────────────────
@@ -1156,7 +1158,7 @@ public partial class MainWindow : Window
         var toast = new Border
         {
             Background = (Brush)FindResource("CardBrush"),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x55, 0x3D, 0xDC, 0x97)),
+            BorderBrush = (Brush)FindResource("Accent55Brush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(11),
             Padding = new Thickness(12, 9, 14, 9),
@@ -1187,6 +1189,7 @@ public partial class MainWindow : Window
     void OpenSettings()
     {
         FontSizeText.Text = $"{_settings.FontSize:0} pt";
+        SyncThemeButtons();
         AnimFull.IsChecked = _settings.Animation == "voll";
         AnimSubtle.IsChecked = _settings.Animation == "dezent";
         AnimOff.IsChecked = _settings.Animation == "aus";

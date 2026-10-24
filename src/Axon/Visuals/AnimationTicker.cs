@@ -114,15 +114,16 @@ public static class AnimationTicker
         if (_timingWindow < 5) return;
         var parts = new System.Collections.Generic.List<string>();
         foreach (var kv in _ms) parts.Add($"{kv.Key} {kv.Value / _timingWindow:0.0} ms/s");
-        Services.AppPaths.Log($"timing: Bildschirm {DisplayHz:0} Hz, {_frames / _timingWindow:0} Bilder/s · " + string.Join(" · ", parts));
+        Services.AppPaths.Log($"timing: Bildschirm {DisplayHz:0} Hz, Render-Stufe {RenderCapability.Tier >> 16}, {_frames / _timingWindow:0} Bilder/s · " + string.Join(" · ", parts));
         _ms.Clear();
         _frames = 0;
         _timingWindow = 0;
     }
 }
 
-/// <summary>DrawingVisual, das als Textur zwischengespeichert wird (nur neu gerastert, wenn sich sein Inhalt ändert).</summary>
+/// <summary>DrawingVisual, das als Textur zwischengespeichert wird (nur neu gerastert, wenn sich sein Inhalt ändert).
+/// <paramref name="scale"/> &lt; 1 rastert gröber – für weiche Ebenen (Nebel, Lichthöfe), bei denen man das nicht sieht.</summary>
 public sealed class CachedVisual : DrawingVisual
 {
-    public CachedVisual() => VisualCacheMode = new BitmapCache { SnapsToDevicePixels = true };
+    public CachedVisual(double scale = 1) => VisualCacheMode = new BitmapCache(scale) { SnapsToDevicePixels = scale >= 1 };
 }

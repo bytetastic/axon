@@ -61,9 +61,9 @@ public sealed class StateDot : FrameworkElement
         SessionState.Attention => MoodPalette.Amber,
         SessionState.Done => MoodPalette.Emerald,
         SessionState.Error => MoodPalette.Coral,
-        SessionState.Exited => Color.FromRgb(0x4C, 0x66, 0x5A),
+        SessionState.Exited => ThemeManager.Current.Exited,
         SessionState.Starting => MoodPalette.Teal,
-        _ => Color.FromRgb(0x2E, 0x9E, 0x72),
+        _ => ThemeManager.Current.Ready,
     };
 
     void Draw()

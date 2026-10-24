@@ -7,23 +7,16 @@ public enum Mood { Calm, Working, Attention, Done, Error }
 
 public enum AnimationLevel { Full, Subtle, Off }
 
-/// <summary>Farbstimmungen. Grundton bleibt immer grün; Akzente wechseln mit dem Zustand.</summary>
+/// <summary>Farbstimmungen des aktuellen Themas. Der Grundton bleibt, Akzente wechseln mit dem Zustand.</summary>
 public static class MoodPalette
 {
-    public static readonly Color Mint = Color.FromRgb(0x5C, 0xFF, 0xB0);
-    public static readonly Color Emerald = Color.FromRgb(0x3D, 0xDC, 0x97);
-    public static readonly Color Teal = Color.FromRgb(0x2B, 0xB3, 0xA3);
-    public static readonly Color Amber = Color.FromRgb(0xFF, 0xB5, 0x47);
-    public static readonly Color Coral = Color.FromRgb(0xFF, 0x6B, 0x7A);
+    public static Color Mint => ThemeManager.Current.Mint;
+    public static Color Emerald => ThemeManager.Current.Emerald;
+    public static Color Teal => ThemeManager.Current.Teal;
+    public static Color Amber => ThemeManager.Current.Amber;
+    public static Color Coral => ThemeManager.Current.Coral;
 
-    public static (Color primary, Color secondary, Color highlight) For(Mood m) => m switch
-    {
-        Mood.Working => (Color.FromRgb(0x4F, 0xF0, 0xA8), Color.FromRgb(0x39, 0xD6, 0xC8), Color.FromRgb(0xE0, 0xFF, 0xF0)),
-        Mood.Attention => (Mix(Emerald, Amber, 0.35), Amber, Color.FromRgb(0xFF, 0xE2, 0xA8)),
-        Mood.Done => (Color.FromRgb(0x45, 0xE6, 0xA0), Teal, Color.FromRgb(0xD8, 0xFF, 0xEC)),
-        Mood.Error => (Mix(Emerald, Coral, 0.3), Coral, Color.FromRgb(0xFF, 0xC8, 0xCE)),
-        _ => (Emerald, Teal, Color.FromRgb(0xB8, 0xFF, 0xD9)),
-    };
+    public static (Color primary, Color secondary, Color highlight) For(Mood m) => ThemeManager.Current.Moods(m);
 
     public static Color Mix(Color a, Color b, double t)
     {

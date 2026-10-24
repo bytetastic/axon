@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 
@@ -7,7 +8,7 @@ namespace Axon.Visuals;
 /// <summary>
 /// Das Axon-Logo (ein „A“ aus Neuronen), das sich selbst zeichnen kann:
 /// Spitze erscheint → Schenkel wachsen nach unten → Querbalken schließt sich → Knoten ploppen auf.
-/// <see cref="Progress"/> 0…1; bei 1 sieht es aus wie das statische Logo.
+/// <see cref="Progress"/> 0…1; bei 1 sieht es aus wie das statische Logo. Farben kommen aus dem aktuellen Thema.
 /// </summary>
 public sealed class LogoMark : FrameworkElement
 {
@@ -20,14 +21,34 @@ public sealed class LogoMark : FrameworkElement
         set => SetValue(ProgressProperty, value);
     }
 
-    // Koordinaten im 100×100-Raster, identisch mit dem Logo in Theme.xaml
+    // Koordinaten im 100×100-Raster, identisch mit dem Titelleisten-Logo (AxonTheme.Logo)
     static readonly Point Apex = new(50, 14), Bl = new(18, 86), Br = new(82, 86), Ml = new(32, 58), Mr = new(68, 58);
 
-    static readonly Pen GlowPen = MakePen(Color.FromArgb(0x33, 0x5C, 0xFF, 0xB0), 16);
-    static readonly Pen LinePen = MakeGradientPen();
-    static readonly Brush NodeBrush = Frozen(new SolidColorBrush(Color.FromRgb(0x5C, 0xFF, 0xB0)));
-    static readonly Brush ApexBrush = Frozen(new SolidColorBrush(Color.FromRgb(0xD6, 0xFF, 0xE9)));
-    static readonly Brush NodeHalo = Frozen(new RadialGradientBrush(Color.FromArgb(0xAA, 0x5C, 0xFF, 0xB0), Color.FromArgb(0, 0x5C, 0xFF, 0xB0)));
+    /// <summary>Stifte und Pinsel in den Farben eines Themas.</summary>
+    sealed record Look(Pen GlowPen, Pen LinePen, Brush NodeBrush, Brush ApexBrush, Brush NodeHalo);
+
+    static readonly Dictionary<AxonTheme, Look> Looks = new();
+
+    static Look LookFor(AxonTheme t)
+    {
+        if (Looks.TryGetValue(t, out var l)) return l;
+        Color node = t.Mint;
+        l = new Look(
+            MakePen(Color.FromArgb(0x33, node.R, node.G, node.B), 16),
+            MakeGradientPen(node, t.LogoBottom),
+            Frozen(new SolidColorBrush(node)),
+            Frozen(new SolidColorBrush(t.LogoApex)),
+            Frozen(new RadialGradientBrush(Color.FromArgb(0xAA, node.R, node.G, node.B), Color.FromArgb(0, node.R, node.G, node.B))));
+        Looks[t] = l;
+        return l;
+    }
+
+    public LogoMark()
+    {
+        // Themenwechsel: neu zeichnen
+        Loaded += (_, _) => ThemeManager.Changed += InvalidateVisual;
+        Unloaded += (_, _) => ThemeManager.Changed -= InvalidateVisual;
+    }
 
     static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
 
@@ -38,9 +59,9 @@ public sealed class LogoMark : FrameworkElement
         return p;
     }
 
-    static Pen MakeGradientPen()
+    static Pen MakeGradientPen(Color top, Color bottom)
     {
-        var b = new LinearGradientBrush(Color.FromRgb(0x5C, 0xFF, 0xB0), Color.FromRgb(0x1F, 0xBF, 0x7A), new Point(0, 0), new Point(0, 1))
+        var b = new LinearGradientBrush(top, bottom, new Point(0, 0), new Point(0, 1))
         {
             MappingMode = BrushMappingMode.Absolute,
             StartPoint = new Point(0, 14),
@@ -70,6 +91,7 @@ public sealed class LogoMark : FrameworkElement
         double s = Math.Min(ActualWidth, ActualHeight) / 100;
         if (s <= 0) return;
         double p = Progress;
+        var look = LookFor(ThemeManager.Current);
         dc.PushTransform(new ScaleTransform(s, s));
 
         double legs = Ease(Seg(p, 0.12, 0.62));
@@ -80,7 +102,7 @@ public sealed class LogoMark : FrameworkElement
         var barL = Lerp(mid, Ml, bar);
         var barR = Lerp(mid, Mr, bar);
 
-        foreach (var pen in new[] { GlowPen, LinePen })
+        foreach (var pen in new[] { look.GlowPen, look.LinePen })
         {
             if (legs > 0)
             {
@@ -91,27 +113,27 @@ public sealed class LogoMark : FrameworkElement
         }
 
         // Knoten: Spitze zuerst, Mitte sobald die Schenkel vorbei sind, Füße am Ende
-        DrawNode(dc, Apex, 9, ApexBrush, Seg(p, 0.0, 0.18));
+        DrawNode(dc, Apex, 9, look.ApexBrush, look.NodeHalo, Seg(p, 0.0, 0.18));
         double midNode = Seg(p, 0.42, 0.6);
-        DrawNode(dc, Ml, 7, NodeBrush, midNode);
-        DrawNode(dc, Mr, 7, NodeBrush, midNode);
+        DrawNode(dc, Ml, 7, look.NodeBrush, look.NodeHalo, midNode);
+        DrawNode(dc, Mr, 7, look.NodeBrush, look.NodeHalo, midNode);
         double feet = Seg(p, 0.6, 0.8);
-        DrawNode(dc, Bl, 8, NodeBrush, feet);
-        DrawNode(dc, Br, 8, NodeBrush, feet);
+        DrawNode(dc, Bl, 8, look.NodeBrush, look.NodeHalo, feet);
+        DrawNode(dc, Br, 8, look.NodeBrush, look.NodeHalo, feet);
 
         dc.Pop();
     }
 
     /// <param name="x">Fortschritt dieses Knotens 0…1</param>
-    static void DrawNode(DrawingContext dc, Point c, double r, Brush fill, double x)
+    static void DrawNode(DrawingContext dc, Point c, double r, Brush fill, Brush halo, double x)
     {
         if (x <= 0) return;
         // beim Erscheinen ein kurzer Lichthof, der wieder abklingt
-        double halo = x < 1 ? Math.Sin(x * Math.PI) : 0;
-        if (halo > 0.01)
+        double glow = x < 1 ? Math.Sin(x * Math.PI) : 0;
+        if (glow > 0.01)
         {
-            dc.PushOpacity(halo);
-            dc.DrawEllipse(NodeHalo, null, c, r * 3, r * 3);
+            dc.PushOpacity(glow);
+            dc.DrawEllipse(halo, null, c, r * 3, r * 3);
             dc.Pop();
         }
         double k = Pop(x);

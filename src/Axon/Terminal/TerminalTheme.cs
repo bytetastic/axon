@@ -1,20 +1,24 @@
 using System.Windows.Media;
+using Axon.Visuals;
 
 namespace Axon.Terminal;
 
-/// <summary>Farben des Terminals – abgestimmt auf den dunkelgrünen Axon-Look.</summary>
+/// <summary>Farben des Terminals – Grundfarben, Cursor und Auswahl kommen aus dem aktuellen Thema.</summary>
 public static class TerminalTheme
 {
-    public static readonly Color Foreground = Color.FromRgb(0xD6, 0xEC, 0xE1);
+    public static Color Foreground => ThemeManager.Current.TermForeground;
     /// <summary>Hintergrund für invertierte Zellen ohne eigene Farbe (die Fläche selbst bleibt transparent).</summary>
-    public static readonly Color Background = Color.FromRgb(0x08, 0x10, 0x0D);
-    public static readonly Color Cursor = Color.FromRgb(0x5C, 0xFF, 0xB0);
-    public static readonly Color Selection = Color.FromArgb(0x55, 0x3D, 0xDC, 0x97);
-    public static readonly Color Link = Color.FromRgb(0x7D, 0xF5, 0xC4);
+    public static Color Background => ThemeManager.Current.TermBackground;
+    public static Color Cursor => ThemeManager.Current.TermCursor;
+    public static Color Selection => ThemeManager.Current.TermSelection;
+    public static Color Link => ThemeManager.Current.TermLink;
+
+    /// <summary>Nach einem Themenwechsel: das Schwarz der Palette passt sich dem Grundton an.</summary>
+    public static void Refresh() => Palette[0] = ThemeManager.Current.TermBlack;
 
     static readonly Color[] Base16 =
     {
-        Color.FromRgb(0x10, 0x1C, 0x17), // schwarz
+        Color.FromRgb(0x10, 0x1C, 0x17), // schwarz (wird vom Thema ersetzt)
         Color.FromRgb(0xFF, 0x6B, 0x7A), // rot
         Color.FromRgb(0x4B, 0xE3, 0x9A), // grün
         Color.FromRgb(0xF5, 0xC6, 0x6B), // gelb

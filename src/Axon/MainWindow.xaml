@@ -5,9 +5,9 @@
         xmlns:s="clr-namespace:Axon.Services"
         xmlns:local="clr-namespace:Axon"
         Title="Axon" Width="1240" Height="800" MinWidth="760" MinHeight="480"
-        WindowStyle="None" ResizeMode="CanResize" Background="{StaticResource Bg0Brush}"
+        WindowStyle="None" ResizeMode="CanResize" Background="{DynamicResource Bg0Brush}"
         Icon="Assets/axon.ico" UseLayoutRounding="True" AllowDrop="True"
-        FontFamily="{StaticResource UiFont}" Foreground="{StaticResource TextBrush}">
+        FontFamily="{StaticResource UiFont}" Foreground="{DynamicResource TextBrush}">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="44" ResizeBorderThickness="6" GlassFrameThickness="0,0,0,1" CornerRadius="0" UseAeroCaptionButtons="False"/>
@@ -35,7 +35,8 @@
     </Window.TaskbarItemInfo>
 
     <Grid x:Name="Root">
-        <v:NeuralField x:Name="Field"/>
+        <!-- Hintergrund-Animation des Themas (NeuralField, HalloweenField) – wird beim Themenwechsel ausgetauscht -->
+        <Grid x:Name="BackdropHost" IsHitTestVisible="False"/>
         <v:AmbientLight x:Name="Ambient"/>
 
         <Grid x:Name="Shell">
@@ -56,7 +57,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" Margin="16,0,4,0" VerticalAlignment="Center">
-                    <Image Source="{StaticResource LogoImage}" Width="20" Height="20"/>
+                    <Image Source="{DynamicResource LogoImage}" Width="20" Height="20"/>
                     <TextBlock Text="AXON" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" FontSize="14"
                                Margin="9,1,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
@@ -85,23 +86,23 @@
                                         </Grid.ColumnDefinitions>
                                         <v:StateDot State="{Binding State}" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="Label" Grid.Column="1" Text="{Binding TabTitle}" Margin="5,0,6,1" FontSize="12.5"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextDimBrush}"/>
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextDimBrush}"/>
                                         <Button x:Name="CloseBtn" Grid.Column="2" Style="{StaticResource IconButton}" Width="22" Height="22" FontSize="8.5"
                                                 Content="&#xE8BB;" Click="CloseTab_Click" Tag="{Binding}" Opacity="0" ToolTip="Tab schließen (Strg+Umschalt+W)"/>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>
                                     <Trigger SourceName="Tab" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Tab" Property="Background" Value="#0F3DDC97"/>
+                                        <Setter TargetName="Tab" Property="Background" Value="{DynamicResource Accent0FBrush}"/>
                                         <Setter TargetName="CloseBtn" Property="Opacity" Value="1"/>
                                     </Trigger>
                                     <DataTrigger Binding="{Binding Unseen}" Value="True">
-                                        <Setter TargetName="Label" Property="Foreground" Value="{StaticResource MintBrush}"/>
+                                        <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource MintBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                        <Setter TargetName="Tab" Property="Background" Value="#1F3DDC97"/>
-                                        <Setter TargetName="Tab" Property="BorderBrush" Value="#3A3DDC97"/>
-                                        <Setter TargetName="Label" Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                        <Setter TargetName="Tab" Property="Background" Value="{DynamicResource Accent1FBrush}"/>
+                                        <Setter TargetName="Tab" Property="BorderBrush" Value="{DynamicResource Accent3ABrush}"/>
+                                        <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                         <Setter TargetName="CloseBtn" Property="Opacity" Value="1"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
@@ -149,7 +150,7 @@
                         </Grid.RowDefinitions>
                         <Grid Margin="2,0,4,8">
                             <!-- Umschalter Projekte / Chats (Strg+Umschalt+J) -->
-                            <Border Background="#0E3DDC97" CornerRadius="9" Padding="1" HorizontalAlignment="Left" Width="176">
+                            <Border Background="{DynamicResource Accent0EBrush}" CornerRadius="9" Padding="1" HorizontalAlignment="Left" Width="176">
                                 <UniformGrid Columns="2">
                                     <RadioButton x:Name="ViewProjects" GroupName="sidebar" Content="Projekte" Style="{StaticResource SegmentButton}"
                                                  ToolTip="Projekte anzeigen (Strg+Umschalt+J wechselt)"/>
@@ -171,21 +172,14 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <Rectangle Width="1" Fill="#263DDC97" HorizontalAlignment="Center"/>
-                                            <Ellipse x:Name="NodeGlow" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0">
-                                                <Ellipse.Fill>
-                                                    <RadialGradientBrush>
-                                                        <GradientStop Color="#995CFFB0" Offset="0"/>
-                                                        <GradientStop Color="#005CFFB0" Offset="1"/>
-                                                    </RadialGradientBrush>
-                                                </Ellipse.Fill>
-                                            </Ellipse>
-                                            <Ellipse x:Name="Node" Width="7" Height="7" Fill="#2F6E55" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Rectangle Width="1" Fill="{DynamicResource Accent26Brush}" HorizontalAlignment="Center"/>
+                                            <Ellipse x:Name="NodeGlow" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" Fill="{DynamicResource NodeGlowBrush}"/>
+                                            <Ellipse x:Name="Node" Width="7" Height="7" Fill="{DynamicResource NodeDimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             <Border x:Name="Card" Grid.Column="1" Grid.ColumnSpan="2" CornerRadius="9" Background="Transparent" Padding="10,7" Margin="4,2,0,2">
                                                 <StackPanel Margin="0,0,50,0">
                                                     <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding ShortPath}" FontSize="11" Foreground="{StaticResource TextDimBrush}" TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
-                                                    <TextBlock Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{StaticResource TextFaintBrush}" Margin="0,2,0,0"/>
+                                                    <TextBlock Text="{Binding ShortPath}" FontSize="11" Foreground="{DynamicResource TextDimBrush}" TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+                                                    <TextBlock Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}" Margin="0,2,0,0"/>
                                                 </StackPanel>
                                             </Border>
                                             <StackPanel x:Name="Actions" Grid.Column="2" Orientation="Horizontal" Opacity="0" Margin="0,0,4,0" VerticalAlignment="Center">
@@ -197,8 +191,8 @@
                                         </Grid>
                                         <DataTemplate.Triggers>
                                             <Trigger SourceName="Item" Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Card" Property="Background" Value="#123DDC97"/>
-                                                <Setter TargetName="Node" Property="Fill" Value="{StaticResource MintBrush}"/>
+                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource Accent12Brush}"/>
+                                                <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
                                                 <Setter TargetName="NodeGlow" Property="Opacity" Value="1"/>
                                                 <Setter TargetName="Actions" Property="Opacity" Value="1"/>
                                             </Trigger>
@@ -224,25 +218,18 @@
                                                     <ColumnDefinition Width="20"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Rectangle Width="1" Fill="#263DDC97" HorizontalAlignment="Center"/>
-                                                <Ellipse x:Name="NodeGlow" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0">
-                                                    <Ellipse.Fill>
-                                                        <RadialGradientBrush>
-                                                            <GradientStop Color="#995CFFB0" Offset="0"/>
-                                                            <GradientStop Color="#005CFFB0" Offset="1"/>
-                                                        </RadialGradientBrush>
-                                                    </Ellipse.Fill>
-                                                </Ellipse>
-                                                <Ellipse x:Name="Node" Width="5" Height="5" Fill="#2F6E55" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Rectangle Width="1" Fill="{DynamicResource Accent26Brush}" HorizontalAlignment="Center"/>
+                                                <Ellipse x:Name="NodeGlow" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" Fill="{DynamicResource NodeGlowBrush}"/>
+                                                <Ellipse x:Name="Node" Width="5" Height="5" Fill="{DynamicResource NodeDimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 <Border x:Name="Card" Grid.Column="1" CornerRadius="9" Background="Transparent" Padding="10,6" Margin="4,1,0,1">
                                                     <StackPanel>
                                                         <TextBlock x:Name="Title" Text="{Binding Title}" FontSize="12.5" TextTrimming="CharacterEllipsis"
-                                                                   Foreground="{StaticResource TextDimBrush}"/>
+                                                                   Foreground="{DynamicResource TextDimBrush}"/>
                                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                            <TextBlock Text="{Binding ProjectName}" FontSize="10.5" Foreground="{StaticResource TextFaintBrush}"
+                                                            <TextBlock Text="{Binding ProjectName}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"
                                                                        MaxWidth="120" TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Text="  ·  " FontSize="10.5" Foreground="{StaticResource TextFaintBrush}"/>
-                                                            <TextBlock x:Name="When" Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{StaticResource TextFaintBrush}"/>
+                                                            <TextBlock Text="  ·  " FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"/>
+                                                            <TextBlock x:Name="When" Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"/>
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </Border>
@@ -254,19 +241,19 @@
                                             </DataTrigger>
                                             <!-- läuft gerade in einem Tab -->
                                             <DataTrigger Binding="{Binding IsOpen}" Value="True">
-                                                <Setter TargetName="Node" Property="Fill" Value="{StaticResource MintBrush}"/>
+                                                <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
                                                 <Setter TargetName="Node" Property="Width" Value="7"/>
                                                 <Setter TargetName="Node" Property="Height" Value="7"/>
                                                 <Setter TargetName="NodeGlow" Property="Opacity" Value="0.6"/>
-                                                <Setter TargetName="Title" Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                                <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                                 <Setter TargetName="When" Property="Text" Value="offen"/>
-                                                <Setter TargetName="When" Property="Foreground" Value="{StaticResource MintBrush}"/>
+                                                <Setter TargetName="When" Property="Foreground" Value="{DynamicResource MintBrush}"/>
                                             </DataTrigger>
                                             <Trigger SourceName="Item" Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Card" Property="Background" Value="#123DDC97"/>
-                                                <Setter TargetName="Node" Property="Fill" Value="{StaticResource MintBrush}"/>
+                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource Accent12Brush}"/>
+                                                <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
                                                 <Setter TargetName="NodeGlow" Property="Opacity" Value="1"/>
-                                                <Setter TargetName="Title" Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                                <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                             </Trigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
@@ -274,7 +261,7 @@
                             </ItemsControl>
                         </ScrollViewer>
                         <TextBlock x:Name="SidebarHint" Grid.Row="2" Text="Ordner lassen sich auch einfach ins Fenster ziehen." FontSize="11" TextWrapping="Wrap"
-                                   Foreground="{StaticResource TextFaintBrush}" Margin="6,8,8,2"/>
+                                   Foreground="{DynamicResource TextFaintBrush}" Margin="6,8,8,2"/>
                     </Grid>
                 </Border>
 
@@ -283,14 +270,7 @@
                     <Grid x:Name="Welcome">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,30">
                             <Grid Width="92" Height="92" HorizontalAlignment="Center" x:Name="WelcomeLogo">
-                                <Ellipse x:Name="WelcomeGlow" Width="170" Height="170" Margin="-39" IsHitTestVisible="False">
-                                    <Ellipse.Fill>
-                                        <RadialGradientBrush>
-                                            <GradientStop Color="#403DDC97" Offset="0"/>
-                                            <GradientStop Color="#003DDC97" Offset="1"/>
-                                        </RadialGradientBrush>
-                                    </Ellipse.Fill>
-                                </Ellipse>
+                                <Ellipse x:Name="WelcomeGlow" Width="170" Height="170" Margin="-39" IsHitTestVisible="False" Fill="{DynamicResource WelcomeGlowBrush}"/>
                                 <v:LogoMark x:Name="WelcomeMark"/>
                             </Grid>
                             <StackPanel x:Name="WelcomeTitle" Orientation="Horizontal" HorizontalAlignment="Center" Margin="14,22,0,0">
@@ -299,7 +279,7 @@
                                 <TextBlock Text="O" FontFamily="{StaticResource DisplayFont}" FontSize="40" FontWeight="Light" Margin="0,0,14,0"/>
                                 <TextBlock Text="N" FontFamily="{StaticResource DisplayFont}" FontSize="40" FontWeight="Light"/>
                             </StackPanel>
-                            <TextBlock x:Name="WelcomeSubtitle" Text="Claude Code, neu verdrahtet." FontSize="15" Foreground="{StaticResource TextDimBrush}"
+                            <TextBlock x:Name="WelcomeSubtitle" Text="Claude Code, neu verdrahtet." FontSize="15" Foreground="{DynamicResource TextDimBrush}"
                                        HorizontalAlignment="Center" Margin="0,6,0,30"/>
                             <StackPanel x:Name="WelcomeButtons" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button x:Name="WelcomeOpenButton" Style="{StaticResource PrimaryButton}" Content="Ordner öffnen"/>
@@ -316,47 +296,40 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type s:ProjectEntry}">
                                         <Border x:Name="Card" Width="200" Margin="5" Padding="14,10" CornerRadius="12" Cursor="Hand"
-                                                Background="#B00A1511" BorderBrush="#1F3DDC97" BorderThickness="1" Tag="{Binding}"
+                                                Background="{DynamicResource RecentCardBrush}" BorderBrush="{DynamicResource Accent1FBrush}" BorderThickness="1" Tag="{Binding}"
                                                 MouseLeftButtonUp="Project_Click" ToolTip="{Binding Path}" ContextMenu="{StaticResource ProjectMenu}">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding ShortPath}" FontSize="11" Foreground="{StaticResource TextDimBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
-                                                <TextBlock Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{StaticResource TextFaintBrush}" Margin="0,3,0,0"/>
+                                                <TextBlock Text="{Binding ShortPath}" FontSize="11" Foreground="{DynamicResource TextDimBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}" Margin="0,3,0,0"/>
                                             </StackPanel>
                                         </Border>
                                         <DataTemplate.Triggers>
                                             <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Card" Property="BorderBrush" Value="#663DDC97"/>
-                                                <Setter TargetName="Card" Property="Background" Value="#D00C1A14"/>
+                                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Accent66Brush}"/>
+                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource RecentCardHoverBrush}"/>
                                             </Trigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock x:Name="WelcomeHint" Text="Strg+Umschalt+T neuer Tab  ·  Strg+Umschalt+W schließen  ·  Strg+Tab wechseln  ·  Strg+Umschalt+S Screenshot"
-                                       FontSize="11.5" Foreground="{StaticResource TextFaintBrush}" HorizontalAlignment="Center" Margin="0,34,0,0"/>
+                                       FontSize="11.5" Foreground="{DynamicResource TextFaintBrush}" HorizontalAlignment="Center" Margin="0,34,0,0"/>
                         </StackPanel>
                     </Grid>
 
                     <!-- Terminal -->
                     <Grid x:Name="PanelHost" Visibility="Collapsed">
-                        <Border x:Name="Panel" CornerRadius="14" Background="{StaticResource PanelBrush}">
+                        <Border x:Name="Panel" CornerRadius="14" Background="{DynamicResource PanelBrush}">
                             <Grid>
-                                <Border CornerRadius="14" IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0.6,1">
-                                            <GradientStop Color="#0E5CFFB0" Offset="0"/>
-                                            <GradientStop Color="#005CFFB0" Offset="0.4"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
+                                <Border CornerRadius="14" IsHitTestVisible="False" Background="{DynamicResource PanelSheenBrush}"/>
                                 <Grid x:Name="TerminalHost" Margin="2"/>
-                                <Border x:Name="ExitCard" Visibility="Collapsed" Background="{StaticResource CardBrush}" BorderBrush="#2C4A3C" BorderThickness="1"
+                                <Border x:Name="ExitCard" Visibility="Collapsed" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
                                         CornerRadius="14" Padding="22,16" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,26">
                                     <StackPanel Orientation="Horizontal">
                                         <StackPanel VerticalAlignment="Center" Margin="0,0,22,0">
                                             <TextBlock x:Name="ExitTitle" Text="Sitzung beendet" FontFamily="{StaticResource DisplayFont}" FontSize="16"/>
-                                            <TextBlock x:Name="ExitText" Foreground="{StaticResource TextDimBrush}" FontSize="12" Margin="0,3,0,0"/>
+                                            <TextBlock x:Name="ExitText" Foreground="{DynamicResource TextDimBrush}" FontSize="12" Margin="0,3,0,0"/>
                                         </StackPanel>
                                         <Button x:Name="ExitContinueButton" Style="{StaticResource PrimaryButton}" Content="Fortsetzen" VerticalAlignment="Center"/>
                                         <Button x:Name="ExitNewButton" Style="{StaticResource GhostButton}" Content="Neues Gespräch" Margin="8,0,0,0" VerticalAlignment="Center"/>
@@ -373,14 +346,14 @@
                     <!-- Spracheingabe: Klangkurve, solange aufgenommen bzw. erkannt wird -->
                     <Border x:Name="VoicePill" Visibility="Collapsed" Opacity="0" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                             Margin="0,0,0,26" Padding="16,7,18,7" CornerRadius="22" Cursor="Hand"
-                            Background="{StaticResource CardBrush}" BorderBrush="#55FF6B7A" BorderThickness="1">
+                            Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource CoralEdgeBrush}" BorderThickness="1">
                         <Border.RenderTransform>
                             <TranslateTransform x:Name="VoicePillShift"/>
                         </Border.RenderTransform>
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse x:Name="VoiceDot" Width="7" Height="7" Fill="#FF6B7A" VerticalAlignment="Center"/>
+                            <Ellipse x:Name="VoiceDot" Width="7" Height="7" Fill="{DynamicResource CoralBrush}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="VoiceTime" Text="0:00" FontSize="12.5" Width="58" Margin="8,0,6,1" VerticalAlignment="Center"
-                                       Foreground="{StaticResource TextDimBrush}"/>
+                                       Foreground="{DynamicResource TextDimBrush}"/>
                             <v:VoiceWave x:Name="VoiceWave" Width="260" Height="42" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -395,8 +368,8 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <v:StateDot x:Name="StatusDot" State="Ready"/>
-                    <TextBlock x:Name="StatusText" Text="Bereit" FontSize="12" Margin="5,0,0,1" Foreground="{StaticResource TextDimBrush}"/>
-                    <TextBlock x:Name="StatusFolder" FontSize="12" Margin="14,0,0,1" Foreground="{StaticResource TextFaintBrush}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="StatusText" Text="Bereit" FontSize="12" Margin="5,0,0,1" Foreground="{DynamicResource TextDimBrush}"/>
+                    <TextBlock x:Name="StatusFolder" FontSize="12" Margin="14,0,0,1" Foreground="{DynamicResource TextFaintBrush}" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Nutzung: Kontext und 5-Stunden-Limit; beim Darüberfahren die Übersicht -->
@@ -408,16 +381,16 @@
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{StaticResource HoverBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <v:UsageRing x:Name="CtxRing" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="CtxText" Text="Kontext –" FontSize="11.5" Margin="5,0,0,1" Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CtxText" Text="Kontext –" FontSize="11.5" Margin="5,0,0,1" Foreground="{DynamicResource TextDimBrush}" VerticalAlignment="Center"/>
                             <v:UsageRing x:Name="LimitRing" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="LimitText" Text="5 h –" FontSize="11.5" Margin="5,0,0,1" Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="LimitText" Text="5 h –" FontSize="11.5" Margin="5,0,0,1" Foreground="{DynamicResource TextDimBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                         <Border.ToolTip>
                             <ToolTip x:Name="UsageTip">
@@ -425,9 +398,9 @@
                             </ToolTip>
                         </Border.ToolTip>
                     </Border>
-                    <TextBlock x:Name="StatusGrid" FontSize="11.5" Foreground="{StaticResource TextFaintBrush}" Margin="0,0,10,1" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StatusGrid" FontSize="11.5" Foreground="{DynamicResource TextFaintBrush}" Margin="0,0,10,1" VerticalAlignment="Center"/>
                     <Button x:Name="AnimButton" Style="{StaticResource IconButton}" Width="28" Height="22" FontSize="12" Content="&#xE706;"/>
-                    <TextBlock x:Name="StatusVersion" FontSize="11.5" Foreground="{StaticResource TextFaintBrush}" Margin="8,0,0,1" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StatusVersion" FontSize="11.5" Foreground="{DynamicResource TextFaintBrush}" Margin="8,0,0,1" VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Grid>
@@ -435,9 +408,19 @@
         <!-- ───────────── Einstellungen ───────────── -->
         <Popup x:Name="SettingsPopup" PlacementTarget="{Binding ElementName=SettingsButton}" Placement="Bottom" HorizontalOffset="-300"
                VerticalOffset="6" AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade">
-            <Border Background="#FA0B1612" BorderBrush="#2C4A3C" BorderThickness="1" CornerRadius="14" Padding="20,18" Width="340" Margin="0,0,8,8">
+            <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1" CornerRadius="14" Padding="20,18" Width="340" Margin="0,0,8,8">
                 <StackPanel>
                     <TextBlock Text="Einstellungen" FontFamily="{StaticResource DisplayFont}" FontSize="17" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="THEME" Style="{StaticResource SectionLabel}"/>
+                    <Border Background="{DynamicResource Accent0EBrush}" CornerRadius="9" Margin="0,6,0,16" Padding="2">
+                        <UniformGrid Columns="2">
+                            <RadioButton x:Name="ThemeNeural" GroupName="theme" Content="Neural" Style="{StaticResource SegmentButton}"
+                                         ToolTip="Neuronales Netz in dunklen Grüntönen"/>
+                            <RadioButton x:Name="ThemeHalloween" GroupName="theme" Content="Halloween" Style="{StaticResource SegmentButton}"
+                                         ToolTip="Mondnacht mit Irrlichtern, Kürbissen, Fledermäusen und einer Spinne"/>
+                        </UniformGrid>
+                    </Border>
 
                     <TextBlock Text="SCHRIFTGRÖSSE" Style="{StaticResource SectionLabel}"/>
                     <Grid Margin="0,6,0,16">
@@ -449,7 +432,7 @@
                     </Grid>
 
                     <TextBlock Text="ANIMATIONEN" Style="{StaticResource SectionLabel}"/>
-                    <Border Background="#0E3DDC97" CornerRadius="9" Margin="0,6,0,16" Padding="2">
+                    <Border Background="{DynamicResource Accent0EBrush}" CornerRadius="9" Margin="0,6,0,16" Padding="2">
                         <UniformGrid Columns="3">
                             <RadioButton x:Name="AnimFull" GroupName="anim" Content="Voll" Style="{StaticResource SegmentButton}"/>
                             <RadioButton x:Name="AnimSubtle" GroupName="anim" Content="Dezent" Style="{StaticResource SegmentButton}"/>
@@ -465,7 +448,7 @@
                               ToolTip="Windows-Benachrichtigung, wenn Claude fertig ist oder eine Freigabe braucht – nur wenn Axon nicht im Vordergrund ist"/>
 
                     <TextBlock Text="SPRACHEINGABE" Style="{StaticResource SectionLabel}"/>
-                    <Border Background="#0E3DDC97" CornerRadius="9" Margin="0,6,0,6" Padding="2">
+                    <Border Background="{DynamicResource Accent0EBrush}" CornerRadius="9" Margin="0,6,0,6" Padding="2">
                         <UniformGrid Columns="2">
                             <RadioButton x:Name="VoiceSmall" GroupName="voice" Content="Schnell" Style="{StaticResource SegmentButton}"
                                          ToolTip="Whisper small – kaum Wartezeit, sehr gut für normale Sätze"/>
@@ -473,9 +456,9 @@
                                          ToolTip="Whisper large-v3-turbo – trifft Namen und Fachbegriffe besser, rechnet aber mehrere Sekunden"/>
                         </UniformGrid>
                     </Border>
-                    <TextBlock x:Name="VoiceStatus" FontSize="12" Foreground="{StaticResource TextDimBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                    <TextBlock Text="Mikrofon" FontSize="12" Foreground="{StaticResource TextDimBrush}" Margin="0,0,0,4"/>
-                    <Border Background="#0E3DDC97" CornerRadius="9" Margin="0,0,0,16" Padding="2">
+                    <TextBlock x:Name="VoiceStatus" FontSize="12" Foreground="{DynamicResource TextDimBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <TextBlock Text="Mikrofon" FontSize="12" Foreground="{DynamicResource TextDimBrush}" Margin="0,0,0,4"/>
+                    <Border Background="{DynamicResource Accent0EBrush}" CornerRadius="9" Margin="0,0,0,16" Padding="2">
                         <StackPanel x:Name="VoiceDevices"/>
                     </Border>
 
@@ -485,17 +468,17 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="ShotFolderText" FontSize="12" Foreground="{StaticResource TextDimBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ShotFolderText" FontSize="12" Foreground="{DynamicResource TextDimBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         <Button x:Name="ShotFolderButton" Grid.Column="1" Style="{StaticResource GhostButton}" Content="Ändern" Padding="10,4" FontSize="12" Margin="8,0,0,0"/>
                     </Grid>
 
                     <TextBlock Text="CLAUDE CODE" Style="{StaticResource SectionLabel}"/>
-                    <TextBlock x:Name="ClaudePathText" FontSize="12" Foreground="{StaticResource TextDimBrush}" TextWrapping="Wrap" Margin="0,6,0,16"/>
+                    <TextBlock x:Name="ClaudePathText" FontSize="12" Foreground="{DynamicResource TextDimBrush}" TextWrapping="Wrap" Margin="0,6,0,16"/>
 
-                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,0,0,16"/>
+                    <Border Height="1" Background="{DynamicResource LineBrush}" Margin="0,0,0,16"/>
 
                     <TextBlock Text="INSTALLATION" Style="{StaticResource SectionLabel}"/>
-                    <TextBlock x:Name="InstallStatus" FontSize="12" Foreground="{StaticResource TextDimBrush}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="InstallStatus" FontSize="12" Foreground="{DynamicResource TextDimBrush}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                     <StackPanel x:Name="InstallOptions" Margin="0,10,0,0">
                         <CheckBox x:Name="DesktopBox" Style="{StaticResource SwitchBox}" Content="Verknüpfung auf dem Desktop"/>
                         <CheckBox x:Name="ContextBox" Style="{StaticResource SwitchBox}" Content="„In Axon öffnen“ im Explorer-Kontextmenü" Margin="0,8,0,0"/>
@@ -509,8 +492,8 @@
         </Popup>
 
         <!-- ───────────── Dialoge ───────────── -->
-        <Grid x:Name="DialogLayer" Visibility="Collapsed" Background="#B8030806">
-            <Border x:Name="DialogCard" Background="{StaticResource CardBrush}" BorderBrush="#2C4A3C" BorderThickness="1" CornerRadius="16"
+        <Grid x:Name="DialogLayer" Visibility="Collapsed" Background="{DynamicResource OverlayBrush}">
+            <Border x:Name="DialogCard" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1" CornerRadius="16"
                     Padding="28,24" MaxWidth="500" MinWidth="380" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.RenderTransform>
                     <ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1"/>
@@ -518,11 +501,14 @@
                 <Border.RenderTransformOrigin>0.5,0.5</Border.RenderTransformOrigin>
                 <StackPanel>
                     <TextBlock x:Name="DialogTitle" FontFamily="{StaticResource DisplayFont}" FontSize="20"/>
-                    <TextBlock x:Name="DialogText" Foreground="{StaticResource TextDimBrush}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="13.5" LineHeight="20"/>
+                    <TextBlock x:Name="DialogText" Foreground="{DynamicResource TextDimBrush}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="13.5" LineHeight="20"/>
                     <StackPanel x:Name="DialogExtra" Margin="0,16,0,0"/>
                     <StackPanel x:Name="DialogButtons" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0"/>
                 </StackPanel>
             </Border>
         </Grid>
+
+        <!-- Themenwechsel: Standbild des alten Looks, das langsam ausblendet -->
+        <Image x:Name="ThemeFade" Visibility="Collapsed" IsHitTestVisible="False" Stretch="Fill"/>
     </Grid>
 </Window>
