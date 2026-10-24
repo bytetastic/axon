@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+*.user
+.vs/
+
+# lokale Arbeitsnotizen (enthalten persönliche Angaben) – nie ins Repo
+CLAUDE.md
+*.log
