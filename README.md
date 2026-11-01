@@ -7,7 +7,8 @@
 **Claude Code, neu verdrahtet.**
 
 Eine native Windows-App für [Claude Code](https://docs.claude.com/en/docs/claude-code) –
-mit eigenem Terminal, Tabs, Live-Status und einem Hintergrund, der wie ein neuronales Netz lebt.
+mit eigenem Terminal, Tabs, Live-Status und einem lebendigen Hintergrund – als neuronales Netz,
+in einer Halloween-Nacht oder in einer verschneiten Winternacht.
 
 [**⬇ Neueste Version herunterladen**](https://github.com/bytetastic/axon/releases/latest)
 
@@ -36,8 +37,18 @@ funktioniert unverändert. Dein normales `claude` im Terminal bleibt davon unber
 - Während Claude arbeitet, atmet der Hintergrund und ein Lichtschweif umkreist das Terminal
 - Braucht Claude eine Freigabe, färbt sich alles bernsteinfarben; ist Claude fertig, läuft eine Welle durchs Netz
 - Startanimation, drei Animationsstufen (voll, dezent, aus) und flüssig auch auf 144-Hz-Bildschirmen
-- Drei Themes, umschaltbar ohne Neustart: **Neural**, **Halloween** (Mondnacht mit Irrlichtern, Kürbissen und
-  Fledermäusen) und **Weihnachten** (Winternacht mit Nordlicht, Schnee, Christbaum und Rentierschlitten)
+
+### 🎨 Drei Themes
+Umschaltbar in den Einstellungen, ohne Neustart – der Wechsel blendet weich über. Jedes Theme reagiert auf
+die gleichen Zustände, nur auf seine eigene Art:
+
+| | **Neural** | **Halloween** | **Weihnachten** |
+|---|---|---|---|
+| Szene | Neuronales Netz in dunklen Grüntönen | Mondnacht über einem Friedhof | Verschneite Winternacht mit Nordlicht |
+| Lebendig | Lichtimpulse, wachsende Dendriten | Irrlichter, Dornenranken, flackernde Kürbisse, Fledermäuse | Eiskristalle, Tannenzweige mit Ilexbeeren, Schneefall, Sternschnuppen, Rentierschlitten |
+| Claude wartet | alles wird bernsteinfarben | die Spinne seilt sich ab | die Christbaumkugel sinkt herab und leuchtet grün |
+| Claude ist fertig | eine Welle läuft durchs Netz | ein Geist steigt auf | der Stern auf dem Baum flammt auf und sprüht Sternenstaub |
+| Fehler | Korallenrot | Blutmond | das Nordlicht wird rot |
 
 ### 💬 Arbeiten mit Claude
 - **Tabs** – mehrere Sitzungen gleichzeitig, jede mit eigenem Statuspunkt; per Doppelklick für die laufende Sitzung umbenennen
@@ -73,6 +84,17 @@ funktioniert unverändert. Dein normales `claude` im Terminal bleibt davon unber
   <tr>
     <td align="center"><sub>Startseite mit deinen Projekten</sub></td>
     <td align="center"><sub>Claude braucht eine Freigabe – die ganze App zeigt es</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/weihnachten.png" alt="Theme Weihnachten: Winternacht mit Nordlicht, Christbaum und Rentierschlitten vor dem Mond"></td>
+    <td width="50%"><img src="docs/screenshots/halloween.png" alt="Theme Halloween: Mondnacht mit Irrlichtern, Kürbissen und totem Baum"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Theme Weihnachten – mit Rentierschlitten vor dem Mond</sub></td>
+    <td align="center"><sub>Theme Halloween</sub></td>
   </tr>
 </table>
 
@@ -121,6 +143,7 @@ Alle Axon-Kürzel nutzen Strg+**Umschalt**, damit Claude Codes eigene Kürzel fr
 | Strg+Umschalt+W | Tab schließen |
 | Strg+Tab / Strg+Umschalt+Tab | Tab wechseln |
 | Strg+Umschalt+B | Projekte ein- und ausblenden |
+| Strg+Umschalt+J | Seitenleiste: zwischen Projekten und Chats wechseln |
 | Strg+Umschalt+S | Letzten Screenshot einfügen |
 | Strg+Umschalt+Leertaste | Spracheingabe starten / beenden |
 | Shift+Enter | Neue Zeile in der Eingabe |
