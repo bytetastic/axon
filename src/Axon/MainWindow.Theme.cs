@@ -27,6 +27,7 @@ public partial class MainWindow
     {
         ThemeNeural.Checked += (_, _) => SetTheme(AxonTheme.Neural.Id);
         ThemeHalloween.Checked += (_, _) => SetTheme(AxonTheme.Halloween.Id);
+        ThemeChristmas.Checked += (_, _) => SetTheme(AxonTheme.Christmas.Id);
     }
 
     /// <summary>Nur für Tests: <c>AXON_TEST_THEME=&lt;id&gt;</c> schaltet 1,5 s nach dem Start um (prüft die Überblendung).</summary>
@@ -46,6 +47,7 @@ public partial class MainWindow
     {
         ThemeNeural.IsChecked = ThemeManager.Current == AxonTheme.Neural;
         ThemeHalloween.IsChecked = ThemeManager.Current == AxonTheme.Halloween;
+        ThemeChristmas.IsChecked = ThemeManager.Current == AxonTheme.Christmas;
     }
 
     void SetTheme(string id)

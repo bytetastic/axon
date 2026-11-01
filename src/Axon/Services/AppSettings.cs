@@ -16,7 +16,7 @@ public sealed class AppSettings
 {
     public double FontSize { get; set; } = 14;
     public string FontFamily { get; set; } = "Cascadia Mono";
-    /// <summary>Farbthema: "neural" oder "halloween".</summary>
+    /// <summary>Farbthema: "neural", "halloween" oder "christmas".</summary>
     public string Theme { get; set; } = "neural";
     /// <summary>"voll", "dezent" oder "aus".</summary>
     public string Animation { get; set; } = "voll";

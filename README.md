@@ -36,6 +36,8 @@ funktioniert unverändert. Dein normales `claude` im Terminal bleibt davon unber
 - Während Claude arbeitet, atmet der Hintergrund und ein Lichtschweif umkreist das Terminal
 - Braucht Claude eine Freigabe, färbt sich alles bernsteinfarben; ist Claude fertig, läuft eine Welle durchs Netz
 - Startanimation, drei Animationsstufen (voll, dezent, aus) und flüssig auch auf 144-Hz-Bildschirmen
+- Drei Themes, umschaltbar ohne Neustart: **Neural**, **Halloween** (Mondnacht mit Irrlichtern, Kürbissen und
+  Fledermäusen) und **Weihnachten** (Winternacht mit Nordlicht, Schnee, Christbaum und Rentierschlitten)
 
 ### 💬 Arbeiten mit Claude
 - **Tabs** – mehrere Sitzungen gleichzeitig, jede mit eigenem Statuspunkt; per Doppelklick für die laufende Sitzung umbenennen

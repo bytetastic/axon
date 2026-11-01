@@ -193,7 +193,54 @@ public sealed class AxonTheme
         };
     }
 
-    public static readonly AxonTheme[] All = { Neural, Halloween };
+    // ───────────────────────────── Weihnachten ─────────────────────────────
+
+    public static readonly AxonTheme Christmas = CreateChristmas();
+
+    static AxonTheme CreateChristmas()
+    {
+        // Kerzengold als Akzent, Eisblau als Zweitfarbe, Tannengrün für „wartet auf dich“, Weihnachtsrot für Fehler
+        Color candle = C("#FFD27A"), gold = C("#F5B84A"), frost = C("#8CCBFF"), fir = C("#6FEA8E"), red = C("#FF4A5A");
+        return new AxonTheme
+        {
+            Id = "christmas",
+            Name = "Weihnachten",
+            Subtitle = "Claude Code, frisch verschneit.",
+            Mint = candle, Emerald = gold, Teal = frost, Amber = fir, Coral = red,
+            Ready = C("#B8862E"), Exited = C("#56607A"), LogoBottom = C("#D9932A"), LogoApex = C("#FFF4D6"),
+            Moods = m => m switch
+            {
+                Mood.Working => (C("#FFC45A"), C("#9AD4FF"), C("#FFF6DC")),
+                Mood.Attention => (Mix(gold, fir, 0.4), fir, C("#DCFFE4")),
+                Mood.Done => (C("#FFCC66"), C("#B8E2FF"), C("#FFFBEA")),
+                Mood.Error => (Mix(gold, red, 0.6), red, C("#FFD0D4")),
+                _ => (gold, frost, C("#FFE6B0")),
+            },
+            TermForeground = C("#E6EDF7"), TermBackground = C("#070C16"), TermCursor = candle,
+            TermSelection = C("#55F5B84A"), TermLink = C("#FFD58A"), TermBlack = C("#101828"),
+            Solids = Build(gold,
+                ("Bg0Brush", "#04070F"), ("PanelBrush", "#E0080E1A"), ("CardBrush", "#F20A1220"), ("LineBrush", "#1E2C44"),
+                ("TextBrush", "#E6EDF7"), ("TextDimBrush", "#8E9CB4"), ("TextFaintBrush", "#56607A"),
+                ("MintBrush", "#FFD27A"), ("EmeraldBrush", "#F5B84A"), ("AmberBrush", "#6FEA8E"), ("CoralBrush", "#FF4A5A"),
+                ("HoverBrush", "#14F5B84A"), ("PressBrush", "#24F5B84A"),
+                ("EdgeBrush", "#2A3A56"), ("TrackBrush", "#172238"), ("SeparatorBrush", "#1C2A42"),
+                ("TooltipBrush", "#F20A1222"), ("MenuBrush", "#F7091020"), ("PopupBrush", "#FA09101E"), ("OnPrimaryBrush", "#1A1000"),
+                ("NodeDimBrush", "#6E5428"), ("RecentCardBrush", "#B0080E1A"), ("RecentCardHoverBrush", "#D00B1424"),
+                ("OverlayBrush", "#B803060C"), ("CoralEdgeBrush", "#55FF4A5A")),
+            Extras = () => new()
+            {
+                ["PanelEdgeBrush"] = Linear(new Point(0, 0), new Point(1, 1), (C("#55F5B84A"), 0), (C("#1A8CCBFF"), 0.45), (C("#338CCBFF"), 1)),
+                ["PrimaryButtonBrush"] = Linear(new Point(0, 0), new Point(1, 1), (C("#FFD480"), 0), (C("#E89A2A"), 1)),
+                ["NodeGlowBrush"] = Radial(candle, 0x99),
+                ["WelcomeGlowBrush"] = Radial(gold, 0x44),
+                ["PanelSheenBrush"] = Linear(new Point(0, 0), new Point(0.6, 1), (C("#0EFFD27A"), 0), (C("#00FFD27A"), 0.4)),
+                ["LogoImage"] = Logo(C("#40FFD27A"), C("#FFE29A"), C("#D9932A"), candle, C("#FFF4D6")),
+            },
+            CreateBackdrop = () => new ChristmasField(),
+        };
+    }
+
+    public static readonly AxonTheme[] All = { Neural, Halloween, Christmas };
 
     public static AxonTheme ById(string? id) => All.FirstOrDefault(t => t.Id == id) ?? Neural;
 }

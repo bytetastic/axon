@@ -447,11 +447,13 @@
 
                     <TextBlock Text="THEME" Style="{StaticResource SectionLabel}"/>
                     <Border Background="{DynamicResource Accent0EBrush}" CornerRadius="9" Margin="0,6,0,16" Padding="2">
-                        <UniformGrid Columns="2">
+                        <UniformGrid Columns="3">
                             <RadioButton x:Name="ThemeNeural" GroupName="theme" Content="Neural" Style="{StaticResource SegmentButton}"
                                          ToolTip="Neuronales Netz in dunklen Grüntönen"/>
                             <RadioButton x:Name="ThemeHalloween" GroupName="theme" Content="Halloween" Style="{StaticResource SegmentButton}"
                                          ToolTip="Mondnacht mit Irrlichtern, Kürbissen, Fledermäusen und einer Spinne"/>
+                            <RadioButton x:Name="ThemeChristmas" GroupName="theme" Content="Weihnachten" Style="{StaticResource SegmentButton}"
+                                         ToolTip="Winternacht mit Nordlicht, Schnee, Christbaum, Hütte und Rentierschlitten"/>
                         </UniformGrid>
                     </Border>
 
