@@ -28,6 +28,13 @@
             <MenuItem Header="Neues Gespräch im selben Ordner" Click="ChatMenuNew_Click"/>
             <MenuItem Header="Ordner im Explorer zeigen" Click="ChatMenuExplorer_Click"/>
         </ContextMenu>
+        <!-- Rechtsklick auf einen Tab; DataContext ist die ClaudeSession -->
+        <ContextMenu x:Key="TabMenu" x:Shared="False">
+            <MenuItem Header="Umbenennen" InputGestureText="Doppelklick" Click="TabMenuRename_Click"/>
+            <MenuItem Header="Ordnernamen wiederherstellen" Click="TabMenuResetName_Click" IsEnabled="{Binding HasCustomTitle}"/>
+            <Separator/>
+            <MenuItem Header="Tab schließen" InputGestureText="Strg+Umschalt+W" Click="TabMenuClose_Click"/>
+        </ContextMenu>
     </Window.Resources>
 
     <Window.TaskbarItemInfo>
@@ -77,7 +84,7 @@
                                 <Border x:Name="Tab" Height="30" Margin="2,0" Padding="8,0,4,0" CornerRadius="9" Background="Transparent"
                                         BorderBrush="Transparent" BorderThickness="1" Cursor="Hand" MinWidth="118" MaxWidth="230"
                                         WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="{Binding TabTooltip}" Tag="{Binding}"
-                                        MouseLeftButtonDown="Tab_MouseDown" MouseUp="Tab_MouseUp">
+                                        MouseLeftButtonDown="Tab_MouseDown" MouseUp="Tab_MouseUp" ContextMenu="{StaticResource TabMenu}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -87,6 +94,14 @@
                                         <v:StateDot State="{Binding State}" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="Label" Grid.Column="1" Text="{Binding TabTitle}" Margin="5,0,6,1" FontSize="12.5"
                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextDimBrush}"/>
+                                        <!-- Umbenennen: nur für diese Sitzung, Enter übernimmt, Esc bricht ab, leer = Ordnername -->
+                                        <Border x:Name="RenameFrame" Grid.Column="1" Visibility="Collapsed" Margin="2,0,4,0" Padding="2,1" CornerRadius="6"
+                                                VerticalAlignment="Center" Background="{DynamicResource Accent14Brush}" BorderBrush="{DynamicResource Accent66Brush}" BorderThickness="1">
+                                            <TextBox x:Name="RenameBox" Tag="{Binding}" FontSize="12.5" Padding="0" BorderThickness="0" Background="Transparent"
+                                                     Foreground="{DynamicResource TextBrush}" CaretBrush="{DynamicResource MintBrush}" SelectionBrush="{DynamicResource EmeraldBrush}"
+                                                     SelectionOpacity="0.45" MaxLength="60" FocusVisualStyle="{x:Null}" WindowChrome.IsHitTestVisibleInChrome="True"
+                                                     IsVisibleChanged="RenameBox_IsVisibleChanged" PreviewKeyDown="RenameBox_PreviewKeyDown" LostKeyboardFocus="RenameBox_LostFocus"/>
+                                        </Border>
                                         <Button x:Name="CloseBtn" Grid.Column="2" Style="{StaticResource IconButton}" Width="22" Height="22" FontSize="8.5"
                                                 Content="&#xE8BB;" Click="CloseTab_Click" Tag="{Binding}" Opacity="0" ToolTip="Tab schließen (Strg+Umschalt+W)"/>
                                     </Grid>
@@ -104,6 +119,12 @@
                                         <Setter TargetName="Tab" Property="BorderBrush" Value="{DynamicResource Accent3ABrush}"/>
                                         <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                         <Setter TargetName="CloseBtn" Property="Opacity" Value="1"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsRenaming}" Value="True">
+                                        <Setter TargetName="Label" Property="Visibility" Value="Hidden"/>
+                                        <Setter TargetName="RenameFrame" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="Tab" Property="Cursor" Value="IBeam"/>
+                                        <Setter TargetName="Tab" Property="MinWidth" Value="190"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
@@ -324,6 +345,18 @@
                             <Grid>
                                 <Border CornerRadius="14" IsHitTestVisible="False" Background="{DynamicResource PanelSheenBrush}"/>
                                 <Grid x:Name="TerminalHost" Margin="2"/>
+                                <!-- Zwischen Claudes Antworten springen: rechts mittig, dezent; voll sichtbar beim Darüberfahren -->
+                                <Border x:Name="AnswerNav" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,18,0" Padding="3"
+                                        CornerRadius="14" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource Accent26Brush}" BorderThickness="1"
+                                        Visibility="Collapsed" Opacity="0">
+                                    <StackPanel>
+                                        <Button x:Name="AnswerUpButton" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Focusable="False"
+                                                Content="&#xE70E;" ToolTip="Zur vorherigen Antwort von Claude"/>
+                                        <Ellipse x:Name="AnswerNavNode" Width="5" Height="5" Margin="0,3" Fill="{DynamicResource MintBrush}" HorizontalAlignment="Center"/>
+                                        <Button x:Name="AnswerDownButton" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Focusable="False"
+                                                Content="&#xE70D;" ToolTip="Zur nächsten Antwort – nach der letzten ganz nach unten"/>
+                                    </StackPanel>
+                                </Border>
                                 <Border x:Name="ExitCard" Visibility="Collapsed" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
                                         CornerRadius="14" Padding="22,16" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,26">
                                     <StackPanel Orientation="Horizontal">

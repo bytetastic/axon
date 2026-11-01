@@ -17,13 +17,15 @@ namespace Axon.Terminal;
 /// Zeichnet einen <see cref="TerminalEmulator"/> und nimmt Tastatur-/Maus-Eingaben entgegen.
 /// Jede Bildschirmzeile ist ein eigenes DrawingVisual und wird nur bei Änderung neu gezeichnet.
 /// </summary>
-public sealed class TerminalView : FrameworkElement
+public sealed partial class TerminalView : FrameworkElement
 {
     sealed class RowVisual : DrawingVisual
     {
         public TerminalLine? Line;
         public int Version = -1;
         public int Layout = -1;
+        /// <summary>Gezeichnete Antwort-Markierung (siehe TerminalView.Answers.cs).</summary>
+        public byte Mark;
         public RowVisual()
         {
             VisualTextRenderingMode = TextRenderingMode.Grayscale;
@@ -118,7 +120,9 @@ public sealed class TerminalView : FrameworkElement
 
     public TerminalView()
     {
-        _children = new VisualCollection(this) { _selectionVisual, _linkVisual, _cursorVisual, _scrollbarVisual };
+        // Zeilen werden vor dem ersten dieser Visuals eingefügt – das Aufleuchten liegt also über dem Text, unter der Auswahl.
+        _children = new VisualCollection(this) { _flashVisual, _selectionVisual, _linkVisual, _cursorVisual, _scrollbarVisual };
+        _flashVisual.Opacity = 0;
         Focusable = true;
         FocusVisualStyle = null;
         AllowDrop = true;
@@ -309,6 +313,7 @@ public sealed class TerminalView : FrameworkElement
 
         bool busy = AnimateScroll(dt);
         busy |= UpdateRows();
+        if (_navDirty) { _navDirty = false; RefreshAnswerNav(); }
         busy |= AnimateCursor(dt);
         busy |= AnimateScrollbar(dt);
         busy |= _selecting || _draggingScrollbar || (now - _lastTyped).TotalSeconds < 1.0 || (now - _scrollbarShown).TotalSeconds < 1.6;
@@ -384,18 +389,22 @@ public sealed class TerminalView : FrameworkElement
             _seenTop = top;
             if (Trace) _traceFrames++;
             int n = Math.Min(_rows.Count, emu.Rows + (int)(emu.ScreenTopAbs - top));
+            ComputeMarks(emu, top, _rows.Count);
             for (int r = 0; r < _rows.Count; r++)
             {
                 var rv = _rows[r];
                 var line = r < n ? emu.GetLineAbs(top + r) : null;
-                if (rv.Line == line && rv.Layout == _layout && (line == null || rv.Version == line.Version)) continue;
+                byte mark = line != null ? _marks[r] : MarkNone;
+                if (rv.Line == line && rv.Layout == _layout && rv.Mark == mark && (line == null || rv.Version == line.Version)) continue;
                 if (Trace) TraceRow(r, rv, line);
                 rv.Line = line;
                 rv.Version = line?.Version ?? -1;
                 rv.Layout = _layout;
+                rv.Mark = mark;
                 using var dc = rv.RenderOpen();
-                if (line != null) DrawLine(dc, line, emu);
+                if (line != null) DrawLine(dc, line, emu, mark);
             }
+            _navDirty = true;
             if (_selDrawn != _selVersion || _selDrawnTop != top || _selLayout != _layout)
                 DrawSelection(top);
         }
@@ -449,10 +458,13 @@ public sealed class TerminalView : FrameworkElement
         return (fg, bg);
     }
 
-    void DrawLine(DrawingContext dc, TerminalLine line, TerminalEmulator emu)
+    void DrawLine(DrawingContext dc, TerminalLine line, TerminalEmulator emu, byte mark = MarkNone)
     {
         var cells = line.Cells;
         int n = Math.Min(cells.Length, Cols);
+        if (mark != MarkNone) DrawAnswerMark(dc, mark);
+        // am Antwortanfang ersetzt der leuchtende Knoten Claudes Punkt
+        int skipCol = (mark & MarkStart) != 0 ? 0 : -1;
 
         // Hintergründe zusammenhängend zeichnen
         int i = 0;
@@ -471,6 +483,7 @@ public sealed class TerminalView : FrameworkElement
         while (i < n)
         {
             var c = cells[i];
+            if (i == skipCol) { i++; continue; }
             if (c.Kind == Cell.WideTail || c.Rune == 0 || c.Rune == ' ' || (c.Attr.Flags & CellFlags.Hidden) != 0)
             {
                 DrawDecorations(dc, c.Attr, i, 1, emu);

@@ -38,7 +38,9 @@ funktioniert unverändert. Dein normales `claude` im Terminal bleibt davon unber
 - Startanimation, drei Animationsstufen (voll, dezent, aus) und flüssig auch auf 144-Hz-Bildschirmen
 
 ### 💬 Arbeiten mit Claude
-- **Tabs** – mehrere Sitzungen gleichzeitig, jede mit eigenem Statuspunkt
+- **Tabs** – mehrere Sitzungen gleichzeitig, jede mit eigenem Statuspunkt; per Doppelklick für die laufende Sitzung umbenennen
+- **Antworten im Blick** – Claudes Antworten sind im Verlauf passend zum Theme hervorgehoben; zwei Pfeile am Rand
+  springen von Antwort zu Antwort
 - **Projekte** – zuletzt genutzte Ordner in der Seitenleiste, Gespräche mit einem Klick fortsetzen
 - **Live-Status** – *arbeitet*, *braucht Freigabe*, *fertig*, inklusive Dauer
 - **Benachrichtigungen** – wenn Claude fertig ist oder dich braucht, während du in einem anderen Fenster bist

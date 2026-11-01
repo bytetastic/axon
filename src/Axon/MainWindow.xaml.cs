@@ -175,6 +175,34 @@ public partial class MainWindow : Window
                 tv.Tick += (_, _) => { tv.Stop(); ToggleVoice(); };
                 tv.Start();
             }
+            // Antwort-Sprünge: AXON_TEST_JUMP=up,up,down (alle 450 ms einer, ab 1,2 s)
+            if (Environment.GetEnvironmentVariable("AXON_TEST_JUMP") is { Length: > 0 } jumps)
+            {
+                var steps = new Queue<string>(jumps.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                var tj = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+                tj.Tick += (_, _) =>
+                {
+                    tj.Interval = TimeSpan.FromMilliseconds(450);
+                    if (steps.Count == 0) { tj.Stop(); return; }
+                    string step = steps.Dequeue();
+                    bool ok = _current?.View.JumpToAnswer(step == "down" ? +1 : -1) ?? false;
+                    AppPaths.Log($"Test-Sprung {step}: {(ok ? "ok" : "nichts")} · Pfeile {_current?.View.AnswerNav}");
+                };
+                tj.Start();
+            }
+            // Umbenennen: AXON_TEST_RENAME=edit zeigt das Eingabefeld, sonst wird der Text als Name gesetzt
+            if (Environment.GetEnvironmentVariable("AXON_TEST_RENAME") is { Length: > 0 } rename)
+            {
+                var tr = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+                tr.Tick += (_, _) =>
+                {
+                    tr.Stop();
+                    if (_current == null) return;
+                    if (rename == "edit") BeginRename(_current);
+                    else { _current.CustomTitle = rename; Title = "Axon – " + _current.TabTitle; }
+                };
+                tr.Start();
+            }
             if (Environment.GetEnvironmentVariable("AXON_TEST_INPUT") is { Length: > 0 } script)
             {
                 var ti = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Max(500, _snapshotDelay - 3500)) };
@@ -378,6 +406,7 @@ public partial class MainWindow : Window
         ContextBox.Click += (_, _) => ApplyInstallOptions();
         WireVoice();
         WireTheme();
+        WireAnswers();
     }
 
     // ───────────────────────────── Tabs ─────────────────────────────
@@ -394,6 +423,7 @@ public partial class MainWindow : Window
             Ambient.Flash(0.45);
         };
         s.PropertyChanged += (_, e) => { if (s == _current && e.PropertyName is nameof(ClaudeSession.StateText) or nameof(ClaudeSession.ClaudeTitle)) UpdateStatus(); };
+        s.View.AnswerNavChanged += () => { if (s == _current) UpdateAnswerNav(); };
         s.UsageChanged += OnUsageChanged;
         s.ChatChanged += _ => RefreshChats();
         s.View.Notice += t => ShowToast(t);
@@ -424,8 +454,10 @@ public partial class MainWindow : Window
         ShowWelcome(false);
         var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
         s.View.BeginAnimation(OpacityProperty, fade);
-        Title = "Axon – " + s.FolderName;
+        Title = "Axon – " + s.TabTitle;
         StatusGrid.Text = s.View.Cols > 0 ? $"{s.View.Cols} × {s.View.RowsCount}" : "";
+        s.View.RefreshAnswerNav();
+        UpdateAnswerNav();
         UpdateStatus();
         UpdateMood();
         UpdateExitCard();
@@ -445,7 +477,7 @@ public partial class MainWindow : Window
         if (s.State is SessionState.Working or SessionState.Attention)
         {
             int r = await ShowDialog("Tab schließen?",
-                $"Claude arbeitet in „{s.FolderName}“ noch. Wenn du den Tab schließt, wird die Sitzung beendet.\nDas Gespräch bleibt gespeichert und lässt sich später fortsetzen.",
+                $"Claude arbeitet in „{s.TabTitle}“ noch. Wenn du den Tab schließt, wird die Sitzung beendet.\nDas Gespräch bleibt gespeichert und lässt sich später fortsetzen.",
                 null, "Schließen", "Abbrechen");
             if (r != 0) return;
         }
@@ -492,7 +524,10 @@ public partial class MainWindow : Window
 
     void Tab_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is ClaudeSession s) Select(s);
+        if ((sender as FrameworkElement)?.Tag is not ClaudeSession s) return;
+        if (s.IsRenaming) return;
+        Select(s);
+        if (e.ClickCount == 2) { BeginRename(s); e.Handled = true; }
     }
 
     void Tab_MouseUp(object sender, MouseButtonEventArgs e)
@@ -891,23 +926,23 @@ public partial class MainWindow : Window
         if (now == SessionState.Done && old == SessionState.Working)
         {
             if (away) s.Unseen = true;
-            Notify(s, "Claude ist fertig", s.LastTurn is { } t ? $"{s.FolderName} · {FormatSeconds(t)}" : s.FolderName, away);
+            Notify(s, "Claude ist fertig", s.LastTurn is { } t ? $"{s.TabTitle} · {FormatSeconds(t)}" : s.TabTitle, away);
         }
         else if (now == SessionState.Attention)
         {
             if (away) s.Unseen = true;
-            Notify(s, "Claude braucht dich", $"{s.FolderName} · {s.Detail}", away);
+            Notify(s, "Claude braucht dich", $"{s.TabTitle} · {s.Detail}", away);
         }
         else if (now == SessionState.Error)
         {
-            Notify(s, "Claude wurde unterbrochen", $"{s.FolderName} · {s.Detail}", away);
+            Notify(s, "Claude wurde unterbrochen", $"{s.TabTitle} · {s.Detail}", away);
         }
     }
 
     void OnSessionMessage(ClaudeSession s, string text)
     {
         bool away = !IsActive || s != _current;
-        Notify(s, "Claude", $"{s.FolderName} · {text}", away);
+        Notify(s, "Claude", $"{s.TabTitle} · {text}", away);
     }
 
     void Notify(ClaudeSession s, string title, string text, bool away)
@@ -1364,6 +1399,7 @@ public partial class MainWindow : Window
         Aura.Level = perf.Contains("noaura") ? AnimationLevel.Off : level;
         Ambient.Level = perf.Contains("noambient") ? AnimationLevel.Off : level;
         TerminalView.CursorBreathing = level != AnimationLevel.Off;
+        TerminalView.FlashAnswers = level != AnimationLevel.Off;
         UpdateTickerRate();
         AnimButton.ToolTip = "Animationen: " + _settings.Animation + " (klicken zum Wechseln)";
         AnimButton.Opacity = level == AnimationLevel.Off ? 0.45 : 1;

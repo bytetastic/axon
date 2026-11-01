@@ -115,8 +115,37 @@ public sealed class ClaudeSession : INotifyPropertyChanged
         private set { if (_claudeTitle != value) { _claudeTitle = value; OnChanged(); OnChanged(nameof(TabTitle)); OnChanged(nameof(TabTooltip)); } }
     }
 
-    /// <summary>Tab-Beschriftung: Ordnername; Claudes Gesprächstitel steht im Tooltip.</summary>
-    public string TabTitle => FolderName;
+    string? _customTitle;
+    bool _renaming;
+
+    /// <summary>Eigener Tab-Name – gilt nur, solange Axon läuft (wird bewusst nicht gespeichert). null = Ordnername.</summary>
+    public string? CustomTitle
+    {
+        get => _customTitle;
+        set
+        {
+            value = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            if (value == FolderName) value = null;
+            if (_customTitle == value) return;
+            _customTitle = value;
+            OnChanged();
+            OnChanged(nameof(TabTitle));
+            OnChanged(nameof(TabTooltip));
+            OnChanged(nameof(HasCustomTitle));
+        }
+    }
+
+    public bool HasCustomTitle => _customTitle != null;
+
+    /// <summary>Der Tab zeigt gerade das Eingabefeld zum Umbenennen.</summary>
+    public bool IsRenaming
+    {
+        get => _renaming;
+        set { if (_renaming != value) { _renaming = value; OnChanged(); } }
+    }
+
+    /// <summary>Tab-Beschriftung: eigener Name oder Ordnername; Claudes Gesprächstitel steht im Tooltip.</summary>
+    public string TabTitle => _customTitle ?? FolderName;
     /// <summary>Öffentlich setzbar nur für den Demo-Modus (Screenshots).</summary>
     public void SetDemoState(SessionState s, string detail = "")
     {
@@ -125,7 +154,9 @@ public sealed class ClaudeSession : INotifyPropertyChanged
         State = s;
     }
 
-    public string TabTooltip => string.IsNullOrEmpty(ClaudeTitle) || ClaudeTitle == "Claude Code" ? Folder : $"{ClaudeTitle}\n{Folder}";
+    public string TabTooltip =>
+        (string.IsNullOrEmpty(ClaudeTitle) || ClaudeTitle == "Claude Code" ? Folder : $"{ClaudeTitle}\n{Folder}")
+        + "\nDoppelklick: Tab umbenennen";
 
     public bool Unseen
     {
@@ -183,8 +214,10 @@ public sealed class ClaudeSession : INotifyPropertyChanged
         if (DemoContent.Enabled)
         {
             // Screenshot-Demo: nachgestellte Sitzung statt echtem Claude
-            bool attention = Environment.GetEnvironmentVariable("AXON_DEMO_SCENE") == "attention" && Folder == DemoContent.Tabs[0];
-            lock (Emulator.Sync) Emulator.Feed(DemoContent.Transcript(cols, attention));
+            string scene = Environment.GetEnvironmentVariable("AXON_DEMO_SCENE") ?? "";
+            bool attention = scene == "attention" && Folder == DemoContent.Tabs[0];
+            lock (Emulator.Sync)
+                Emulator.Feed(scene == "answers" && Folder == DemoContent.Tabs[0] ? DemoContent.LongTranscript(cols) : DemoContent.Transcript(cols, attention));
             View.RequestRender();
             Usage = DemoContent.Usage();
             UsageChanged?.Invoke(this);

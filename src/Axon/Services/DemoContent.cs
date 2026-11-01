@@ -64,6 +64,66 @@ public static class DemoContent
     static string Fg(int r, int g, int b) => $"{E}[38;2;{r};{g};{b}m";
     static string Bg(int r, int g, int b) => $"{E}[48;2;{r};{g};{b}m";
     static readonly string Orange = Fg(215, 119, 87), Gray = Fg(153, 153, 153), Dim = Fg(110, 110, 110), White = Fg(230, 230, 230), Green = Fg(78, 186, 101);
+    /// <summary>Punkt vor Textantworten – Claudes Themenfarbe „text“ (dunkles Thema), daran erkennt Axon die Antworten.</summary>
+    static readonly string TextDot = Fg(255, 255, 255);
+
+    /// <summary>Langer Verlauf mit mehreren Runden (<c>AXON_DEMO_SCENE=answers</c>) – zum Testen von Hervorhebung und Sprüngen.</summary>
+    public static string LongTranscript(int cols)
+    {
+        var rounds = new (string ask, string[] first, (string tool, string arg, string result)[] tools, string[] answer)[]
+        {
+            ("Warum lädt die Startseite so langsam?",
+                new[] { "Ich messe zuerst, was beim Laden passiert." },
+                new[] { ("Bash", "npm run build -- --stats", "Bundle 1,8 MB, davon 1,1 MB Diagramm-Bibliothek"), ("Read", "src/pages/Start.tsx", "Read 96 lines") },
+                new[] { "Der größte Brocken ist die Diagramm-Bibliothek: Sie wird auf der Startseite geladen,", "obwohl dort gar kein Diagramm zu sehen ist.", "", "Vorschlag:", "  1. Diagramme erst auf der Statistikseite nachladen (dynamischer Import)", "  2. Bilder der Galerie verkleinert ausliefern", "", "Damit sollte sich die Ladezeit etwa halbieren. Soll ich beides umsetzen?" }),
+            ("Ja, mach beides",
+                new[] { "Ich fange mit dem Nachladen der Diagramme an." },
+                new[] { ("Update", "src/pages/Statistik.tsx", "Updated src/pages/Statistik.tsx with 4 additions and 2 removals"), ("Update", "src/components/Galerie.tsx", "Updated src/components/Galerie.tsx with 7 additions and 1 removal"), ("Bash", "npm run build -- --stats", "Bundle 0,7 MB") },
+                new[] { "Erledigt. Das Bundle der Startseite ist von 1,8 MB auf 0,7 MB geschrumpft.", "", "  • Diagramme kommen jetzt erst auf der Statistikseite", "  • Die Galerie liefert Bilder in drei Größen aus (srcset)", "", "Gemessen im Produktions-Build: erste Anzeige nach 0,9 s statt 2,1 s." }),
+            ("Laufen die Tests noch?",
+                Array.Empty<string>(),
+                new[] { ("Bash", "npm test", "✓ 48 Tests bestanden (4,2 s)") },
+                new[] { "Ja, alle 48 Tests laufen durch." }),
+            ("Schreib einen kurzen Eintrag fürs Changelog",
+                new[] { "Hier ein Vorschlag im Stil der bisherigen Einträge:" },
+                Array.Empty<(string, string, string)>(),
+                new[] { "## 2.4.0", "", "- Startseite lädt etwa doppelt so schnell (Diagramme werden erst bei Bedarf geladen)", "- Galerie liefert Bilder passend zur Bildschirmgröße aus", "", "Soll ich ihn in CHANGELOG.md eintragen?" }),
+        };
+        var lines = new List<string>
+        {
+            $"{Orange} ▐▛███▜▌{Reset}   {E}[1mClaude Code{E}[22m {Gray}v2.1.316{Reset}",
+            $"{Orange}▝▜█████▛▘{Reset}  {Gray}Opus 5.5{Reset}",
+            $"{Orange}  ▘▘ ▝▝{Reset}    {Gray}~\\Projekte\\aurora-web{Reset}",
+            "",
+        };
+        string userBg = Bg(55, 55, 55);
+        foreach (var (ask, first, tools, answer) in rounds)
+        {
+            lines.Add($"{userBg}{Gray}>{White} {ask.PadRight(Math.Max(0, Math.Min(cols - 4, 70)))}{Reset}");
+            lines.Add("");
+            if (first.Length > 0)
+            {
+                lines.Add($"{TextDot}●{Reset} {first[0]}");
+                for (int i = 1; i < first.Length; i++) lines.Add("  " + first[i]);
+                lines.Add("");
+            }
+            foreach (var (tool, arg, result) in tools)
+            {
+                lines.Add($"{Green}●{Reset} {E}[1m{tool}{E}[22m({arg})");
+                lines.Add($"  {Gray}⎿  {result}{Reset}");
+                lines.Add("");
+            }
+            lines.Add($"{TextDot}●{Reset} {answer[0]}");
+            for (int i = 1; i < answer.Length; i++) lines.Add(answer[i].Length == 0 ? "" : "  " + answer[i]);
+            lines.Add("");
+        }
+        string rule = Gray + new string('─', Math.Max(20, cols - 2)) + Reset;
+        lines.Add(rule);
+        lines.Add($"{Gray}>{Reset} ");
+        lines.Add(rule);
+        lines.Add($"  {Fg(111, 143, 128)}Kontext 38 % · 5-h-Limit 27 % · Woche 43 %{Reset}");
+        return string.Join("\r\n", lines) + $"{E}[2A{E}[3G";
+    }
 
     /// <summary>Nachgestellte Sitzung: eine Anfrage, Werkzeugaufrufe, eine Änderung mit Diff, Tests –
     /// bzw. mit <paramref name="attention"/> eine Freigabe-Abfrage.</summary>
@@ -88,7 +148,7 @@ public static class DemoContent
             {
                 $"{Gray}>{Reset} Schreib Tests für den neuen Dunkelmodus-Schalter",
                 "",
-                $"{White}⏺{Reset} Für die Klick-Tests brauche ich die Testbibliothek für Benutzereingaben.",
+                $"{TextDot}●{Reset} Für die Klick-Tests brauche ich die Testbibliothek für Benutzereingaben.",
                 "",
                 $"{Orange}╭{new string('─', w - 2)}╮{Reset}",
                 Box($"{White}Bash command{Reset}"),
@@ -107,12 +167,12 @@ public static class DemoContent
         {
             $"{Gray}>{Reset} Füge in den Einstellungen einen Schalter für den Dunkelmodus hinzu und teste ihn",
             "",
-            $"{White}⏺{Reset} Ich schaue mir zuerst an, wie die Einstellungsseite aufgebaut ist.",
+            $"{TextDot}●{Reset} Ich schaue mir zuerst an, wie die Einstellungsseite aufgebaut ist.",
             "",
-            $"{Green}⏺{Reset} {White}Read{Reset}(src/settings/SettingsPage.tsx)",
+            $"{Green}●{Reset} {White}Read{Reset}(src/settings/SettingsPage.tsx)",
             $"  {Gray}⎿  Read 142 lines{Reset}",
             "",
-            $"{Green}⏺{Reset} {White}Update{Reset}(src/settings/SettingsPage.tsx)",
+            $"{Green}●{Reset} {White}Update{Reset}(src/settings/SettingsPage.tsx)",
             $"  {Gray}⎿  Updated src/settings/SettingsPage.tsx with 9 additions and 1 removal{Reset}",
             $"      {Dim}38{Reset}      <Section title=\"Darstellung\">",
             $"      {Dim}39{Reset}  {Diff(delBg, "-", "   <ThemeHint />")}",
@@ -122,10 +182,10 @@ public static class DemoContent
             $"      {Dim}42{Reset}  {Diff(addBg, "+", "     onChange={on => setTheme(on ? \"dark\" : \"light\")}")}",
             $"      {Dim}43{Reset}  {Diff(addBg, "+", "   />")}",
             "",
-            $"{Green}⏺{Reset} {White}Bash{Reset}(npm test -- settings)",
+            $"{Green}●{Reset} {White}Bash{Reset}(npm test -- settings)",
             $"  {Gray}⎿  ✓ 12 Tests bestanden (1,8 s){Reset}",
             "",
-            $"{White}⏺{Reset} Der Schalter ist eingebaut und speichert die Wahl dauerhaft. Alle 12 Tests laufen durch.",
+            $"{TextDot}●{Reset} Der Schalter ist eingebaut und speichert die Wahl dauerhaft. Alle 12 Tests laufen durch.",
             $"  Als Nächstes könnte ich den Modus beim ersten Start automatisch an Windows anpassen.",
             "",
             $" {Orange}✻ Denkt nach … {Gray}(24 s · ↓ 1.9k tokens){Reset}",
