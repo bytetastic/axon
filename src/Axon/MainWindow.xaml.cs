@@ -52,6 +52,7 @@ public partial class MainWindow : Window
         ProjectList.ItemsSource = _projects;
         RecentCards.ItemsSource = _recent;
         ChatList.ItemsSource = _chats;
+        InitFavorites();
         StatusVersion.Text = "v" + AppPaths.Version;
 
         RestoreWindowBounds();
@@ -202,6 +203,22 @@ public partial class MainWindow : Window
                     else { _current.CustomTitle = rename; Title = "Axon – " + _current.TabTitle; }
                 };
                 tr.Start();
+            }
+            // Favoriten: AXON_TEST_PIN=demo-3,fav – Id heftet an/löst, „fav“ klappt den Bereich um (ab 1,2 s alle 450 ms)
+            if (Environment.GetEnvironmentVariable("AXON_TEST_PIN") is { Length: > 0 } pinScript)
+            {
+                var steps = new Queue<string>(pinScript.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                var tp = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+                tp.Tick += (_, _) =>
+                {
+                    tp.Interval = TimeSpan.FromMilliseconds(450);
+                    if (steps.Count == 0) { tp.Stop(); return; }
+                    string step = steps.Dequeue();
+                    if (step == "fav") { SetFavoritesOpen(!_settings.FavoritesOpen, animate: true); AppPaths.Log("Test-Favoriten offen: " + _settings.FavoritesOpen); return; }
+                    var c = _favorites.Concat(_chats).FirstOrDefault(x => x.SessionId == step);
+                    if (c != null) TogglePin(c); else AppPaths.Log("Test-Favorit nicht gefunden: " + step);
+                };
+                tp.Start();
             }
             if (Environment.GetEnvironmentVariable("AXON_TEST_INPUT") is { Length: > 0 } script)
             {
@@ -763,18 +780,26 @@ public partial class MainWindow : Window
         if (_chatsLoading) { _chatsAgain = true; return; }
         _chatsLoading = true;
         var hidden = new Dictionary<string, DateTime>(_settings.HiddenProjects);
-        Task.Run(() => ChatHistory.Load(hidden)).ContinueWith(t =>
+        var pinned = _settings.PinnedChats.ToList();
+        Task.Run(() => (Pinned: ChatHistory.LoadPinned(pinned), Recent: ChatHistory.Load(hidden, pinned))).ContinueWith(t =>
         {
             _chatsLoading = false;
             if (t.Exception == null)
             {
                 var open = new HashSet<string>(_sessions.Where(s => s.ChatId != null).Select(s => s.ChatId!));
                 _chats.Clear();
-                foreach (var c in t.Result)
+                foreach (var c in t.Result.Recent)
                 {
                     c.IsOpen = open.Contains(c.SessionId);
                     _chats.Add(c);
                 }
+                _favorites.Clear();
+                foreach (var c in t.Result.Pinned)
+                {
+                    c.IsOpen = open.Contains(c.SessionId);
+                    _favorites.Add(c);
+                }
+                UpdateFavoritesHeader();
             }
             if (_chatsAgain) { _chatsAgain = false; RefreshChats(); }
         }, TaskScheduler.FromCurrentSynchronizationContext());

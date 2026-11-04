@@ -25,9 +25,71 @@
         <!-- Rechtsklick auf einen Chat; DataContext ist der ChatEntry -->
         <ContextMenu x:Key="ChatMenu" x:Shared="False">
             <MenuItem Header="Fortsetzen" Click="ChatMenuResume_Click"/>
+            <MenuItem Header="{Binding PinMenuText}" Click="ChatMenuPin_Click"/>
+            <Separator/>
             <MenuItem Header="Neues Gespräch im selben Ordner" Click="ChatMenuNew_Click"/>
             <MenuItem Header="Ordner im Explorer zeigen" Click="ChatMenuExplorer_Click"/>
         </ContextMenu>
+        <!-- Ein Chat in der Seitenleiste (Favoriten und Chat-Liste); Klick setzt genau dieses Gespräch fort -->
+        <DataTemplate x:Key="ChatItemTemplate" DataType="{x:Type s:ChatEntry}">
+            <StackPanel>
+                <TextBlock x:Name="GroupLabel" Text="{Binding Group}" Style="{StaticResource SectionLabel}" Margin="26,10,0,4" Visibility="Collapsed"/>
+                <Grid x:Name="Item" Background="Transparent" Cursor="Hand" Margin="0,0,4,0" Tag="{Binding}"
+                      MouseLeftButtonUp="Chat_Click" ToolTip="{Binding Tooltip}" ContextMenu="{StaticResource ChatMenu}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Width="1" Fill="{DynamicResource Accent26Brush}" HorizontalAlignment="Center"/>
+                    <Ellipse x:Name="NodeGlow" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" Fill="{DynamicResource NodeGlowBrush}"/>
+                    <Ellipse x:Name="Node" Width="5" Height="5" Fill="{DynamicResource NodeDimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border x:Name="Card" Grid.Column="1" Grid.ColumnSpan="2" CornerRadius="9" Background="Transparent" Padding="10,6" Margin="4,1,0,1">
+                        <StackPanel x:Name="Texts">
+                            <TextBlock x:Name="Title" Text="{Binding Title}" FontSize="12.5" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource TextDimBrush}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding ProjectName}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"
+                                           MaxWidth="120" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="  ·  " FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"/>
+                                <TextBlock x:Name="When" Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="PinBtn" Grid.Column="2" Style="{StaticResource IconButton}" Width="24" Height="26" FontSize="11.5" Margin="0,0,4,0"
+                            VerticalAlignment="Center" Opacity="0" Content="&#xE718;" ToolTip="An Favoriten anheften"
+                            Click="ChatPin_Click" Tag="{Binding}"/>
+                </Grid>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding ShowGroup}" Value="True">
+                    <Setter TargetName="GroupLabel" Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                    <Setter TargetName="PinBtn" Property="Content" Value="&#xE77A;"/>
+                    <Setter TargetName="PinBtn" Property="ToolTip" Value="Aus den Favoriten lösen"/>
+                </DataTrigger>
+                <!-- läuft gerade in einem Tab -->
+                <DataTrigger Binding="{Binding IsOpen}" Value="True">
+                    <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
+                    <Setter TargetName="Node" Property="Width" Value="7"/>
+                    <Setter TargetName="Node" Property="Height" Value="7"/>
+                    <Setter TargetName="NodeGlow" Property="Opacity" Value="0.6"/>
+                    <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                    <Setter TargetName="When" Property="Text" Value="offen"/>
+                    <Setter TargetName="When" Property="Foreground" Value="{DynamicResource MintBrush}"/>
+                </DataTrigger>
+                <Trigger SourceName="Item" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Card" Property="Background" Value="{DynamicResource Accent12Brush}"/>
+                    <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
+                    <Setter TargetName="NodeGlow" Property="Opacity" Value="1"/>
+                    <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                    <Setter TargetName="PinBtn" Property="Opacity" Value="1"/>
+                    <!-- Platz für den Knopf, damit er den Titel nicht überdeckt -->
+                    <Setter TargetName="Texts" Property="Margin" Value="0,0,22,0"/>
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
         <!-- Rechtsklick auf einen Tab; DataContext ist die ClaudeSession -->
         <ContextMenu x:Key="TabMenu" x:Shared="False">
             <MenuItem Header="Umbenennen" InputGestureText="Doppelklick" Click="TabMenuRename_Click"/>
@@ -166,6 +228,7 @@
                     <Grid Width="236" HorizontalAlignment="Left" Margin="12,4,2,6">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -182,7 +245,49 @@
                             <Button x:Name="OpenFolderButton" HorizontalAlignment="Right" Style="{StaticResource IconButton}" Width="28" Height="26"
                                     FontSize="13" Content="&#xE8F4;" ToolTip="Ordner öffnen (Strg+Umschalt+O)"/>
                         </Grid>
-                        <ScrollViewer x:Name="ProjectScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                        <!-- Favoriten: angeheftete Chats, in beiden Ansichten oben, aufklappbar; nur sichtbar, wenn es welche gibt -->
+                        <StackPanel x:Name="Favorites" Grid.Row="1" Visibility="Collapsed" Margin="0,0,0,4">
+                            <Border x:Name="FavHeader" Cursor="Hand" CornerRadius="8" Margin="0,0,4,0" MouseLeftButtonUp="FavHeader_Click"
+                                    ToolTip="Favoriten auf- oder zuklappen">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource Accent0FBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="FavChevron" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="9"
+                                               Foreground="{DynamicResource TextDimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               RenderTransformOrigin="0.5,0.5">
+                                        <TextBlock.RenderTransform>
+                                            <RotateTransform x:Name="FavChevronTurn" Angle="90"/>
+                                        </TextBlock.RenderTransform>
+                                    </TextBlock>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="14,7,0,7">
+                                        <TextBlock Text="&#xE718;" FontFamily="{StaticResource IconFont}" FontSize="10" Foreground="{DynamicResource MintBrush}"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="FAVORITEN" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="FavCount" Style="{StaticResource SectionLabel}" Foreground="{DynamicResource MintBrush}"
+                                                   VerticalAlignment="Center" Margin="7,0,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border x:Name="FavBody" ClipToBounds="True">
+                                <ScrollViewer MaxHeight="232" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                                    <ItemsControl x:Name="FavList" Focusable="False" ItemTemplate="{StaticResource ChatItemTemplate}"/>
+                                </ScrollViewer>
+                            </Border>
+                            <Rectangle Height="1" Fill="{DynamicResource Accent14Brush}" Margin="26,6,12,2"/>
+                        </StackPanel>
+                        <ScrollViewer x:Name="ProjectScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
                             <ItemsControl x:Name="ProjectList" Focusable="False">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type s:ProjectEntry}">
@@ -226,62 +331,11 @@
                             </ItemsControl>
                         </ScrollViewer>
                         <!-- Chats: einzelne Gespräche, nach Zeit gruppiert; Klick setzt genau dieses Gespräch fort -->
-                        <ScrollViewer x:Name="ChatScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                        <ScrollViewer x:Name="ChatScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                       Focusable="False" Visibility="Collapsed">
-                            <ItemsControl x:Name="ChatList" Focusable="False">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type s:ChatEntry}">
-                                        <StackPanel>
-                                            <TextBlock x:Name="GroupLabel" Text="{Binding Group}" Style="{StaticResource SectionLabel}" Margin="26,10,0,4" Visibility="Collapsed"/>
-                                            <Grid x:Name="Item" Background="Transparent" Cursor="Hand" Margin="0,0,4,0" Tag="{Binding}"
-                                                  MouseLeftButtonUp="Chat_Click" ToolTip="{Binding Tooltip}" ContextMenu="{StaticResource ChatMenu}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="20"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Rectangle Width="1" Fill="{DynamicResource Accent26Brush}" HorizontalAlignment="Center"/>
-                                                <Ellipse x:Name="NodeGlow" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" Fill="{DynamicResource NodeGlowBrush}"/>
-                                                <Ellipse x:Name="Node" Width="5" Height="5" Fill="{DynamicResource NodeDimBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                <Border x:Name="Card" Grid.Column="1" CornerRadius="9" Background="Transparent" Padding="10,6" Margin="4,1,0,1">
-                                                    <StackPanel>
-                                                        <TextBlock x:Name="Title" Text="{Binding Title}" FontSize="12.5" TextTrimming="CharacterEllipsis"
-                                                                   Foreground="{DynamicResource TextDimBrush}"/>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                            <TextBlock Text="{Binding ProjectName}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"
-                                                                       MaxWidth="120" TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Text="  ·  " FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"/>
-                                                            <TextBlock x:Name="When" Text="{Binding LastUsedText}" FontSize="10.5" Foreground="{DynamicResource TextFaintBrush}"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                        </StackPanel>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding ShowGroup}" Value="True">
-                                                <Setter TargetName="GroupLabel" Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                            <!-- läuft gerade in einem Tab -->
-                                            <DataTrigger Binding="{Binding IsOpen}" Value="True">
-                                                <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
-                                                <Setter TargetName="Node" Property="Width" Value="7"/>
-                                                <Setter TargetName="Node" Property="Height" Value="7"/>
-                                                <Setter TargetName="NodeGlow" Property="Opacity" Value="0.6"/>
-                                                <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                                <Setter TargetName="When" Property="Text" Value="offen"/>
-                                                <Setter TargetName="When" Property="Foreground" Value="{DynamicResource MintBrush}"/>
-                                            </DataTrigger>
-                                            <Trigger SourceName="Item" Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource Accent12Brush}"/>
-                                                <Setter TargetName="Node" Property="Fill" Value="{DynamicResource MintBrush}"/>
-                                                <Setter TargetName="NodeGlow" Property="Opacity" Value="1"/>
-                                                <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                            </Trigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ItemsControl x:Name="ChatList" Focusable="False" ItemTemplate="{StaticResource ChatItemTemplate}"/>
                         </ScrollViewer>
-                        <TextBlock x:Name="SidebarHint" Grid.Row="2" Text="Ordner lassen sich auch einfach ins Fenster ziehen." FontSize="11" TextWrapping="Wrap"
+                        <TextBlock x:Name="SidebarHint" Grid.Row="3" Text="Ordner lassen sich auch einfach ins Fenster ziehen." FontSize="11" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFaintBrush}" Margin="6,8,8,2"/>
                     </Grid>
                 </Border>

@@ -33,6 +33,10 @@ public sealed class AppSettings
     public bool SidebarOpen { get; set; } = true;
     /// <summary>Was die Seitenleiste zeigt: "projekte" oder "chats".</summary>
     public string SidebarView { get; set; } = "projekte";
+    /// <summary>Angeheftete Chats (Gesprächs-Ids) in der Reihenfolge, in der sie angeheftet wurden.</summary>
+    public List<string> PinnedChats { get; set; } = new();
+    /// <summary>Favoriten-Bereich der Seitenleiste aufgeklappt.</summary>
+    public bool FavoritesOpen { get; set; } = true;
     public bool InstallPromptDismissed { get; set; }
 
     public double? WinLeft { get; set; }

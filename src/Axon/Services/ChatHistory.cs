@@ -19,9 +19,12 @@ public sealed class ChatEntry
     public bool ShowGroup { get; set; }
     /// <summary>Läuft gerade in einem Tab.</summary>
     public bool IsOpen { get; set; }
+    /// <summary>In den Favoriten angeheftet.</summary>
+    public bool IsPinned { get; set; }
 
     public string LastUsedText => ProjectEntry.Ago(LastUsed);
     public string Tooltip => $"{Title}\n{ProjectPath}";
+    public string PinMenuText => IsPinned ? "Aus den Favoriten lösen" : "An Favoriten anheften";
 }
 
 /// <summary>Einzelne Gespräche aus Claude Codes Sitzungsdateien (~\.claude\projects\&lt;ordner&gt;\&lt;id&gt;.jsonl).</summary>
@@ -30,12 +33,16 @@ public static class ChatHistory
     // Titel ändern sich nicht mehr, sobald Claude einen vergeben hat – deshalb pro Datei merken (die Dateien werden bis zu 60 MB groß).
     static readonly Dictionary<string, (string Cwd, string Title)> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public static List<ChatEntry> Load(IReadOnlyDictionary<string, DateTime> hiddenProjects, int max = 60)
+    static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
+
+    /// <summary>Die neuesten Gespräche, ohne die angehefteten (die stehen in den Favoriten).</summary>
+    public static List<ChatEntry> Load(IReadOnlyDictionary<string, DateTime> hiddenProjects, IReadOnlyCollection<string> pinned, int max = 60)
     {
-        if (DemoContent.Enabled) return Grouped(DemoContent.Chats());
+        var skip = new HashSet<string>(pinned, StringComparer.OrdinalIgnoreCase);
+        if (DemoContent.Enabled) return Grouped(DemoContent.Chats().Where(c => !skip.Contains(c.SessionId)).ToList());
         var hidden = new HashSet<string>(hiddenProjects.Keys.Select(k => k.TrimEnd('\\')), StringComparer.OrdinalIgnoreCase);
         string temp = Path.GetTempPath().TrimEnd('\\');
-        string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
+        string root = Root;
         var list = new List<ChatEntry>();
         try
         {
@@ -47,6 +54,7 @@ public static class ChatHistory
             foreach (var f in files)
             {
                 if (list.Count >= max) break;
+                if (skip.Contains(Path.GetFileNameWithoutExtension(f.Name))) continue;
                 var info = Read(f.FullName);
                 if (info == null) continue;
                 var (cwd, title) = info.Value;
@@ -67,6 +75,50 @@ public static class ChatHistory
             AppPaths.Log("Chatliste: " + ex.Message);
         }
         return Grouped(list);
+    }
+
+    /// <summary>Die angehefteten Gespräche in der Reihenfolge der Ids – egal wie alt und auch aus ausgeblendeten Projekten.
+    /// Gespräche, deren Datei oder Ordner fehlt, werden übergangen (die Id bleibt gespeichert).</summary>
+    public static List<ChatEntry> LoadPinned(IReadOnlyList<string> ids)
+    {
+        var list = new List<ChatEntry>();
+        if (ids.Count == 0) return list;
+        if (DemoContent.Enabled)
+        {
+            var demo = DemoContent.Chats();
+            foreach (var id in ids)
+                if (demo.FirstOrDefault(c => c.SessionId == id) is { } d) list.Add(d);
+        }
+        else
+        {
+            try
+            {
+                string root = Root;
+                if (!Directory.Exists(root)) return list;
+                var dirs = new DirectoryInfo(root).EnumerateDirectories().ToList();
+                foreach (var id in ids)
+                {
+                    if (id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) continue;
+                    var file = dirs.Select(d => new FileInfo(Path.Combine(d.FullName, id + ".jsonl"))).FirstOrDefault(f => f.Exists);
+                    if (file == null || Read(file.FullName) is not { } info || !Directory.Exists(info.Cwd)) continue;
+                    string name = Path.GetFileName(info.Cwd.TrimEnd('\\'));
+                    list.Add(new ChatEntry
+                    {
+                        SessionId = id,
+                        Title = info.Title,
+                        ProjectPath = info.Cwd,
+                        ProjectName = string.IsNullOrEmpty(name) ? info.Cwd : name,
+                        LastUsed = file.LastWriteTime,
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                AppPaths.Log("Favoriten: " + ex.Message);
+            }
+        }
+        foreach (var c in list) c.IsPinned = true;
+        return list;
     }
 
     static List<ChatEntry> Grouped(List<ChatEntry> list)

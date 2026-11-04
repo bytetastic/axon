@@ -24,8 +24,10 @@ public static class DemoContent
 
     public static List<ChatEntry> Chats()
     {
+        // feste Ids, damit sich Demo-Chats anheften lassen (Favoriten) – Nummer = Position in der Liste
+        int n = 0;
         ChatEntry C(string title, string project, DateTime t) =>
-            new() { SessionId = Guid.NewGuid().ToString(), Title = title, ProjectPath = @"D:\Projekte\" + project, ProjectName = project, LastUsed = t };
+            new() { SessionId = "demo-" + ++n, Title = title, ProjectPath = @"D:\Projekte\" + project, ProjectName = project, LastUsed = t };
         return new()
         {
             C("Dunkelmodus-Schalter in den Einstellungen", "aurora-web", DateTime.Now.AddMinutes(-2)),
